@@ -18,3 +18,4 @@ setuptools.setup(
     license='MIT',
     packages=['epiread-tools'],
     install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam'],
+)
