@@ -10,7 +10,7 @@ import sys
 import argparse
 import os
 import numpy as np
-from collections import  defaultdict
+from collections import defaultdict
 from epiparser import parse_epireads
 from em_utils import GenomicInterval, Mapper, split_intervals_to_chromosomes, bedgraph_to_intervals
 from naming_conventions import *
