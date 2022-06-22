@@ -141,6 +141,23 @@ class asEpiread:
         self.read_start, self.methylation, self.snp_start,\
         self.snps])
 
+class CoordsEpiread(asEpiread):
+    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
+                 snp_start=NO_DATA, snps=NO_DATA, origin=NO_DATA):
+        self.coords = [int(x) for x in coords.split(COORD_SEP)]
+        self.read_start = self.coords[0]
+        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
+                 snp_start, snps, origin)
+
+    def get_coord_methylation(self):
+        '''
+        pairs of coordinate, methylation
+        e.g. 2051767,C
+        :return:
+        '''
+        yield from zip(self.coords, self.methylation)
+
+
 class Mapper:
     '''
     keeps mapping from genomic to relative and vice versa

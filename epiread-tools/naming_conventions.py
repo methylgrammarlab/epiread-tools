@@ -19,6 +19,7 @@ methylation_state = {"C": METHYLATED, "T": UNMETHYLATED, "c": METHYLATED,
                      "t": UNMETHYLATED, ".": NOVAL, "N": NOVAL, "-":NOVAL, "n": NOVAL}
 NO_DATA = "."
 SNP_SEP = ":"
+COORD_SEP = ","
 POSITIVE_STRAND = "+"
 NEGATIVE_STRAND = "-"
 TAB = "\t"
