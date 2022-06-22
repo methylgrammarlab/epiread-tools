@@ -20,7 +20,6 @@ class BedgraphRunner():
         if bedgraph:
             self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
         else:
-            # self.genomic_intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in genomic_intervals]
             self.genomic_intervals = [GenomicInterval(x) for x in genomic_intervals]
 
         self.original_intervals = genomic_intervals
@@ -82,39 +81,27 @@ class BedgraphRunner():
             self.calc_mean_methylation()
             self.write_bedgraph(chrom)
 #%%
-parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
-parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
-parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, '+\
-                                     'separated by commas')
-parser.add_argument('outfile', help='path for output file')
-parser.add_argument('-i','--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas',
-                    default=False)
-parser.add_argument('-b','--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
-                    default=False)
-parser.add_argument('-g','--genome', help='file with chromosome:bp, used to parse entire file if interval not specified',
-                    default=False)
-parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
+if __name__ == "__main":
+    parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
+    parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
+    parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, '+\
+                                         'separated by commas')
+    parser.add_argument('outfile', help='path for output file')
+    parser.add_argument('-i','--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas',
+                        default=False)
+    parser.add_argument('-b','--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
+                        default=False)
+    parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
 
-args = parser.parse_args()
-epiread_files = args.epireads.split(",")
+    args = parser.parse_args()
+    epiread_files = args.epireads.split(",")
 
-if args.intervals:
-    genomic_intervals = args.intervals.split(",")
-elif args.bedfile:
-    genomic_intervals = args.bedfile
-else:
-    pass
-    #TODO: implement genome option
-runner = BedgraphRunner(genomic_intervals, args.cpg_coordinates, epiread_files, args.outfile, args.header, args.bedfile)
-runner.tobedgraph()
+    if args.intervals:
+        genomic_intervals = args.intervals.split(",")
+    elif args.bedfile:
+        genomic_intervals = args.bedfile
+    else:
+        raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
+    runner = BedgraphRunner(genomic_intervals, args.cpg_coordinates, epiread_files, args.outfile, args.header, args.bedfile)
+    runner.tobedgraph()
 
-
-#%%
-# genomic_intervals=["chr1:205598000-205603169"]
-# cpg_coordinates = "/Users/ireneu/PycharmProjects/dmr-cleanup/in-silico/epireads/hg19.CpG.bed.gz"
-# epiread_files = ["/Users/ireneu/PycharmProjects/dmr-cleanup/epiread_format/small_Pancreas-Beta-Z0000043H.after_fix_bug_dash.epiread.gz"]
-# outfile="."
-# header=False
-# bedfile=False
-# runner = BedgraphRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile, header, bedfile)
-# runner.tobedgraph()

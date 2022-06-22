@@ -16,3 +16,6 @@ python3 epireadToBedgraph.py <cpg_coordinates_file> <epiread> <run_name> <output
 ```
 
 
+# TODO
+- write unit tests
+- support new epiread version with flag
