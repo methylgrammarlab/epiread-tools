@@ -19,4 +19,5 @@ setuptools.setup(
     packages=['epiread-tools'],
     package_dir={"src": "src"},
     install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam'],
+
 )
