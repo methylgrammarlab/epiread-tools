@@ -8,7 +8,7 @@
 import numpy as np
 import pysam
 from naming_conventions import *
-from em_utils import GenomicInterval, asEpiread, Mapper
+from em_utils import asEpiread, Mapper
 import scipy.sparse as sp
 from itertools import tee
 #%%
