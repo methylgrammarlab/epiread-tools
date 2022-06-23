@@ -8,14 +8,14 @@
 
 import argparse
 import numpy as np
-from epiparser import parse_epireads
+from epiparser import Parser
 from em_utils import GenomicInterval, split_intervals_to_chromosomes, bedgraph_to_intervals
 from naming_conventions import *
 
 
 class BedgraphRunner():
 
-    def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, header=False, bedgraph=True):
+    def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, epiformat, header=False, bedgraph=True):
         self.header = header
         if bedgraph:
             self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
@@ -26,16 +26,18 @@ class BedgraphRunner():
         self.cpg_locations = cpg_locations
         self.epiread_files = epiread_files
         self.outfile = outfile
+        self.epiformat = epiformat
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
 
 
     def parse_reads(self, chrom, intervals):
         '''
-        set data amd mapper
+        get data amd mapper
         :return:
         '''
-        self.methylation_matrix, _, self.mapper = parse_epireads(chrom, intervals,
-                                    self.epiread_files, self.cpg_locations,False, False)
+        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epi_format)
+        self.methylation_matrix, self.mapper = parser.parse()
+
 
     def calc_coverage(self):
         '''
@@ -81,19 +83,22 @@ class BedgraphRunner():
             self.calc_mean_methylation()
             self.write_bedgraph(chrom)
 #%%
-if __name__ == "__main":
-    parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
-    parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
-    parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, '+\
-                                         'separated by commas')
-    parser.add_argument('outfile', help='path for output file')
-    parser.add_argument('-i','--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas',
-                        default=False)
-    parser.add_argument('-b','--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
-                        default=False)
-    parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
 
-    args = parser.parse_args()
+if __name__ == "__main":
+    argument_parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
+    argument_parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
+    argument_parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, ' +\
+                                         'separated by commas')
+    argument_parser.add_argument('outfile', help='path for output file')
+    argument_parser.add_argument('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas',
+                                 default=False)
+    argument_parser.add_argument('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
+                                 default=False)
+    argument_parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
+    argument_parser.add_argument('-A', '--coords', help='epiread files contain coords',
+                                 default=False)
+
+    args = argument_parser.parse_args()
     epiread_files = args.epireads.split(",")
 
     if args.intervals:
@@ -102,6 +107,9 @@ if __name__ == "__main":
         genomic_intervals = args.bedfile
     else:
         raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
-    runner = BedgraphRunner(genomic_intervals, args.cpg_coordinates, epiread_files, args.outfile, args.header, args.bedfile)
+    epiformat = "old_epiread"
+    if args.coords:
+        epiformat = "old_epiread_A"
+    runner = BedgraphRunner(genomic_intervals, args.cpg_coordinates, epiread_files, args.outfile, epiformat, args.header, args.bedfile)
     runner.tobedgraph()
 

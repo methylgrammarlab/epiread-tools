@@ -16,8 +16,19 @@ import re
 
 
 class Parser:
+    '''
+    read epiread data into scipy matrix
+    '''
 
     def __init__(self,chrom, intervals, epiread_files, CpG_file, epi_format):
+        '''
+
+        :param chrom: chromosome name
+        :param intervals: GenpmicInterval list
+        :param epiread_files: list of filepaths
+        :param CpG_file: file with coordinates of cpgs in genome
+        :param epi_format: epiread file format
+        '''
         self.chrom = chrom
         self.intervals = intervals
         self.epiread_files = epiread_files
@@ -27,9 +38,17 @@ class Parser:
         self.fileobj= format_to_fileobj[self.epiformat]
 
     def init_mapper(self):
+        '''
+        map matrix coordinates
+        :return:
+        '''
         self.mapper = Mapper(self.chrom, self.intervals, self.epiread_files, self.CpG_file)
 
     def parse(self):
+        '''
+        read files at designated intervals to matrix
+        :return: scipy sparse matrix, mapper
+        '''
         small_matrices = []
         sources = []
         i = 0
@@ -121,6 +140,7 @@ class EpiSNP(Epiread_format):
 
     def __init__(self, fp):
         super().__init__(fp)
+        self.row = SNPRow #TODO: row should only contain SNPs
 
     def to_csr(self, mapper, intervals): #problem: aligning
         epiread_iterator = self.cut(intervals)
@@ -129,7 +149,7 @@ class EpiSNP(Epiread_format):
         data = []
         i = 0
         for i, epiread in enumerate(epiread_iterator):
-            record = EpiRow(*epiread.split(TAB))
+            record = self.row(*epiread.split(TAB))
             if record.has_snps():
                 rel_start = mapper.snp_abs_to_rel(record.get_snp_start())
                 for dist, snp in record.get_snps():
@@ -138,6 +158,11 @@ class EpiSNP(Epiread_format):
                         col.append(rel_start + int(dist))
                         data.append(dna_to_ind[snp])
         return sp.csr_matrix((data, (row, col)), shape=(i+1, mapper.max_snps), dtype=int)
+
+class CommentEpiSNP(EpiSNP):
+    def __init__(self, fp):
+        super().__init__(fp)
+        self.row = CommentEpiSNPRow #TODO: row should only contain SNPs
 
 #%%
 #Row objects
@@ -202,7 +227,7 @@ class EpiRow:
     def __len__(self):
         return len(self.methylation)
 
-    def __repr__(self):
+    def __repr__(self): #TODO: fix
         return (TAB).join([self.chrom, self.read_name, self.read_pos, self.strand,\
         self.read_start, self.methylation, self.snp_start,\
         self.snps])
@@ -235,13 +260,19 @@ class SNPRow(EpiRow):
     def __init__(self, **args):
         pass
 
+class CommentEpiSNPRow(SNPRow):
+    def __init__(self):
+        pass
 
-format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP
-                    # "snps_with_comments": CommentEpiSNP
+
+format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP,
+                    "snps_with_comments": CommentEpiSNP
                      }
 
 #%%
-
+#TODO:
+# test SNP parsing
+# decide if SNPs belong in EpiRow
 
 chrom = "chr1"
 intervals = [GenomicInterval("chr1:205499888-205500131")]
