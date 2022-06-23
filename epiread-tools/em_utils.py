@@ -189,7 +189,7 @@ class Mapper:
         return rel_intervals
 
     def init_rel_to_mat_ind(self):
-        rel_cpgs = list(chain(*[list(range(x,y+1)) for (x,y) in self.rel_intervals]))
+        rel_cpgs = list(chain(*[list(range(x,y)) for (x,y) in self.rel_intervals]))
         index_to_relative = dict(enumerate(rel_cpgs))
         relative_to_index = {v: k for k, v in index_to_relative.items()}
         max_cpgs = len(rel_cpgs)

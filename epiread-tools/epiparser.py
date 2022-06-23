@@ -102,19 +102,19 @@ class CoordsEpiread(Epiread_format):
         super().__init__(fp)
         self.row = CoordsRow
 
-    def to_csr(self, mapper, intervals): #TODO: fix
+    def to_csr(self, mapper, intervals):
         row = []
         col = []
         data = []
-        rel_intervals = np.array(mapper.rel_intervals).flatten()
         epiread_iterator = self.cut(intervals)
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
-            rel_start = mapper.abs_to_rel[record.get_start()]
-            rel_end = mapper.abs_to_rel[record.get_end()]
-            for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
-
+            for abs, cpg in record.get_coord_methylation():
+                if mapper.abs_to_rel[abs] in mapper.all_rel:
+                    row.append(i)
+                    col.append(mapper.abs_to_ind(abs))
+                    data.append(methylation_state[cpg])
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_CpGs), dtype=int)
 
 class EpiSNP(Epiread_format):
