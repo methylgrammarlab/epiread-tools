@@ -157,6 +157,13 @@ class CoordsEpiread(asEpiread):
         '''
         yield from zip(self.coords, self.methylation)
 
+    def get_end(self):
+        '''
+        get last coordinate
+        :return:
+        '''
+        return self.coords[-1]
+
 
 class Mapper:
     '''

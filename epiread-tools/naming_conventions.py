@@ -29,3 +29,5 @@ lower_conf_thresh = 0.1
 
 
 CHROMOSOMES = ["chr" + str(x) for x in [*range(1,23), "X", "Y", "M"]]
+
+#TODO: add dict of epiread versions to format (has SNPs, snp comments, coords)

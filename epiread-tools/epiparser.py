@@ -109,7 +109,7 @@ def epiread_to_csr(epiread_iterator, rel_intervals, abs_to_rel, rel_to_ind, max_
         n_reads = i
         record = asEpiread(*epiread.split(TAB))
         rel_start = abs_to_rel[record.get_start()]
-        rel_end = rel_start+len(record)
+        rel_end = abs_to_rel[record.get_end()] #TODO: implement!
         for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
             if not intersect_end - intersect_start: #overlap length is 0
                 continue
