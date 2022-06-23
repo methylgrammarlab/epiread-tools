@@ -76,101 +76,13 @@ class GenomicInterval:
 
 
 
-class asEpiread:
-    '''
-    epiread format includes: Chromosome name, Read name
-    Read position in paired-end sequencing, Bisulfite strand,
-    Position of the cytosine in the first CpG (0-based),  Retention pattern,
-    Position of the first SNP, Base call of all SNPs covered
-    min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
-    '''
-    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
-                 snp_start=NO_DATA, snps=NO_DATA, origin=NO_DATA):
-        self.chrom = chrom
-        self.min_start = min_start
-        self.max_end = max_end
-        self.read_name = read_name
-        self.read_pos = read_pos
-        self.strand = strand
-        self.read_start = read_start
-        self.methylation = methylation
-        self.snp_start = snp_start
-        self.snps = snps
-        self.origin=origin
-
-    def get_start(self):
-        '''
-        :return: read start e.g. 2100056
-        '''
-        return int(self.read_start)
-
-    def get_snps(self):
-        '''
-        :return: pairs of dist from start, SNP
-        e.g. 0:A
-        '''
-        if bool(__debug__): #true unless -O flag is used
-            my_snps = re.sub("[\(\[].*?[\)\]]", "", self.snps).split(SNP_SEP)
-        else:
-            my_snps = self.snps.split(SNP_SEP)
-        for i in range(0, len(my_snps), 2):
-            yield (my_snps[i],my_snps[i+1])
-
-    def get_snp_start(self):
-        '''
-        :return: snp start, e.g. 213356
-        '''
-        try:
-            return int(self.snp_start)
-        except ValueError:
-            print("Record has no SNPs")
-            raise
-
-    def has_snps(self):
-        '''
-        :return: True if SNPs in read
-        '''
-        #check that snp_start isn't "."
-        return self.snp_start != NO_DATA
-
-    def __len__(self):
-        return len(self.methylation)
-
-    def __repr__(self):
-        return (TAB).join([self.chrom, self.read_name, self.read_pos, self.strand,\
-        self.read_start, self.methylation, self.snp_start,\
-        self.snps])
-
-class CoordsEpiread(asEpiread):
-    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
-                 snp_start=NO_DATA, snps=NO_DATA, origin=NO_DATA):
-        self.coords = [int(x) for x in coords.split(COORD_SEP)]
-        self.read_start = self.coords[0]
-        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
-                 snp_start, snps, origin)
-
-    def get_coord_methylation(self):
-        '''
-        pairs of coordinate, methylation
-        e.g. 2051767,C
-        :return:
-        '''
-        yield from zip(self.coords, self.methylation)
-
-    def get_end(self):
-        '''
-        get last coordinate
-        :return:
-        '''
-        return self.coords[-1]
-
 
 class Mapper:
     '''
     keeps mapping from genomic to relative and vice versa
     '''
 
-    def __init__(self,chrom, intervals, epiread_files, CpG_file, one_based, min_dist=0):
+    def __init__(self,chrom, intervals, epiread_files, CpG_file, min_dist=0):
         '''
 
         :param chrom: chromosome
@@ -179,7 +91,6 @@ class Mapper:
         :param CpG_file: file in bed format of cpg coordinates
         :param min_dist: minimun distance between intervals
         '''
-        self.one_based = one_based
         self.chrom = chrom
         self.intervals = intervals
         self.epiread_files = epiread_files
@@ -188,7 +99,7 @@ class Mapper:
 
         self.merged_intervals = self.merge_intervals()
         self.init_sample_ids()
-        self.load_CpGs(one_based=self.one_based)
+        self.load_CpGs()
         self.load_snps()
         self.rel_intervals = self.get_nearest_rel_intervals(self.merged_intervals)
         self.init_rel_to_mat_ind()
@@ -249,7 +160,7 @@ class Mapper:
         '''
         return sorted(list(self.sample_to_id.values()))
 
-    def load_CpGs(self, one_based=True):
+    def load_CpGs(self):
         '''
         :param one_based: epireads are 0 based, so take 1
         off each cpg start point
@@ -261,8 +172,6 @@ class Mapper:
         for record in tabixfile.fetch(self.chrom, None, None): #load entire chromosome
             CpGs.append(int(record.split(TAB)[1]))  # start position in bed format
         CpGs = np.array(CpGs)
-        if one_based:
-            CpGs -= 1
         rel_to_abs = dict(enumerate(CpGs))
         abs_to_rel = {v: k for k, v in rel_to_abs.items()}
         self.cpgs, self.abs_to_rel, self.rel_to_abs = CpGs, abs_to_rel, rel_to_abs
@@ -363,6 +272,26 @@ def bedgraph_to_intervals(fp, header=False):
         df = pd.read_csv(fp, usecols=[0,1,2], names=["chrom", "start", "end"], sep="\t")
     intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.to_records(index=False)]
     return intervals
+
+def find_intersection(intervals, range_start, range_end):
+    '''
+    find intersection between intervals and range
+    included book-ended eg: (3,3)
+    :param intervals: np array of interval start, interval end
+    :param range_start: range start
+    :param range_end: range end
+    :return: list of intersections
+    '''
+    intersection = []
+    start_ind = np.searchsorted(intervals, range_start)
+    end_ind = np.searchsorted(intervals, range_end, "right")
+    if start_ind %2: #even:
+       start_ind -=1
+    if end_ind%2: #odd
+        end_ind += 1
+    for interval_start, interval_end in zip(intervals[start_ind:end_ind:2], intervals[start_ind+1:end_ind:2]):
+        intersection.append((max(range_start, interval_start), min(range_end, interval_end)))
+    return intersection
 
 
 def jsonconverter(obj):

@@ -8,141 +8,252 @@
 import numpy as np
 import pysam
 from naming_conventions import *
-from em_utils import asEpiread, Mapper
+from em_utils import Mapper, find_intersection, GenomicInterval
 import scipy.sparse as sp
-from itertools import tee
+import os
+import re
 #%%
 
 
-def parse_epireads(chrom, intervals, epiread_files, CpG_file, one_based, parse_snps=True):
-    '''
-    read all epiread files to sparse matrix, optionally parse mutation data
-    :param chrom: chromosome
-    :param intervals: list of GenomicInterval of chunk
-    :param epiread_files: list of input epireads
-    :param CpG_file
-    :param parse_snps: add snp data
-    :return: matrix of methylation, matrix of SNPs (if parse_snps),
-    mapping from abs to rel and back
-    '''
-    mapper = Mapper(chrom, intervals, epiread_files, CpG_file, one_based) #init mapping
-    small_matrices = []
-    if parse_snps:
-        snp_matrices = []
-    sources = []
-    i = 0
-    for epi_file in epiread_files:
-        if parse_snps:
-            epi_iter, snp_iter = tee(cut_epiread(intervals, epi_file))
-        else:
-            epi_iter = cut_epiread(intervals, epi_file)
-        small_matrix = epiread_to_csr(epi_iter, mapper.rel_intervals, mapper.abs_to_rel,
-                                      mapper.rel_to_ind, mapper.max_cpgs)
-        small_matrices.append(small_matrix)
-        sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
-        i += small_matrix.shape[0]
-        #handle snps
-        if parse_snps:
-            snp_matrices.append(snp_to_csr(snp_iter, mapper.snp_abs_to_rel, small_matrix.shape[0],
-                                           mapper.max_snps))
-    mapper.init_index_to_source(sources)
-    methylation_matrix, snp_matrix = sp.vstack(small_matrices, dtype=int), None
-    if parse_snps:
-        snp_matrix = sp.vstack(snp_matrices, dtype=int)
-    return methylation_matrix, snp_matrix, mapper
+class Parser:
 
+    def __init__(self,chrom, intervals, epiread_files, CpG_file, epi_format):
+        self.chrom = chrom
+        self.intervals = intervals
+        self.epiread_files = epiread_files
+        self.CpG_file = CpG_file
+        self.init_mapper()
+        self.epiformat = epi_format
+        self.fileobj= format_to_fileobj[self.epiformat]
 
-def cut_epiread(intervals, epiread_file):
-    '''
-    Tabix out interval from file, return reads
-    in original format
-    :param intervals: list of GenomicInterval of chunk
-    :param epiread_file: one Tabix-indexed file in epiread format
-    :return: iterator of relevant records
-    '''
-    tabixfile = pysam.TabixFile(epiread_file)
-    for interval in intervals:
-        try:
-            yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
-        except ValueError: #no coverage for this region in file
-            # with open("coverage.txt", "a+") as outfile:
-            #     outfile.write(epiread_file+TAB+str(interval)+"\n")
-            continue
+    def init_mapper(self):
+        self.mapper = Mapper(self.chrom, self.intervals, self.epiread_files, self.CpG_file)
+
+    def parse(self):
+        small_matrices = []
+        sources = []
+        i = 0
+        for epi_file in self.epiread_files:
+            small_matrix = self.fileobj(epi_file).to_csr(self.mapper, self.intervals)
+            small_matrices.append(small_matrix)
+            sources.append((i, i + small_matrix.shape[0], self.mapper.sample_to_id[epi_file]))
+            i += small_matrix.shape[0]
+        self.mapper.init_index_to_source(sources)
+        methylation_matrix = sp.vstack(small_matrices, dtype=int)
+        return methylation_matrix, self.mapper
 #%%
-def find_intersection(intervals, range_start, range_end):
+#epiread objects
+
+class Epiread_format:
     '''
-    find intersection between intervals and range
-    :param intervals: np array of interval start, interval end
-    :param range_start: range start
-    :param range_end: range end
-    :return: list of intersections
+    epiread format includes: Chromosome name, Read name
+    Read position in paired-end sequencing, Bisulfite strand,
+    Position of the cytosine in the first CpG (0-based),  Retention pattern,
+    Position of the first SNP, Base call of all SNPs covered
+    min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
     '''
-    intersection = []
-    start_ind = np.searchsorted(intervals, range_start)
-    end_ind = np.searchsorted(intervals, range_end, "right")
-    if start_ind %2: #even:
-       start_ind -=1
-    if end_ind%2: #odd
-        end_ind += 1
-    for interval_start, interval_end in zip(intervals[start_ind:end_ind:2], intervals[start_ind+1:end_ind:2]):
-        intersection.append((max(range_start, interval_start), min(range_end, interval_end)))
-    return intersection
+    def __init__(self, fp):
+        self.fp = fp
+        self.verify_input()
+        self.row = EpiRow
+
+    def verify_input(self):
+        assert os.path.isfile(self.fp) #file exists
+        assert self.fp.endswith(".gz") #gzipped file
+        assert os.path.isfile(self.fp+".tbi") #index file exists
 
 
-
-def epiread_to_csr(epiread_iterator, rel_intervals, abs_to_rel, rel_to_ind, max_CpGs):
-    '''
-    map reads from single source to sparse matrix
-    :param epiread_iterator: iterator of epiread records
-    :param rel_intervals: relative CpG coordinates to parse
-    :param abs_to_rel: dict from genomic coordinates to relative
-    :param rel_to_ind: func mapping relative coordinates to index in matrix
-    :param max_CpGs: total number of CpGs in matrix
-    :return: sparse matrix of reads
-    '''
-    row = []
-    col = []
-    data = []
-    n_reads = 0
-    rel_intervals = np.array(rel_intervals).flatten()
-    for i, epiread in enumerate(epiread_iterator):
-        n_reads = i
-        record = asEpiread(*epiread.split(TAB))
-        rel_start = abs_to_rel[record.get_start()]
-        rel_end = abs_to_rel[record.get_end()] #TODO: implement!
-        for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
-            if not intersect_end - intersect_start: #overlap length is 0
+    def cut(self, intervals):
+        '''
+        Tabix out interval from file, return reads
+        in original format
+        :param intervals: list of GenomicInterval of chunk
+        :return: iterator of relevant records
+        '''
+        tabixfile = pysam.TabixFile(self.fp)
+        for interval in intervals:
+            try:
+                yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
+            except ValueError:  # no coverage for this region in file
                 continue
-            row.extend([i]*(intersect_end-intersect_start))
-            col.extend(list(range(rel_to_ind(intersect_start), rel_to_ind(intersect_end -1) + 1)))
-            for cpg in record.methylation[intersect_start-rel_start:intersect_end-rel_start]:
-                data.append(methylation_state[cpg])
-    return sp.csr_matrix((data, (row, col)), shape=(n_reads+1, max_CpGs), dtype=int)
 
+    def to_csr(self, mapper, intervals):
+        row = []
+        col = []
+        data = []
+        i = 0
+        rel_intervals = np.array(mapper.rel_intervals).flatten()
+        epiread_iterator = self.cut(intervals)
+        for i, epiread in enumerate(epiread_iterator):
+            record = self.row(*epiread.split(TAB))
+            rel_start = mapper.abs_to_rel[record.get_start()]
+            rel_end = rel_start+len(record)
+            for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
+                if intersect_end - intersect_start:  # overlap length is > 0
+                    row.extend([i] * (intersect_end - intersect_start))
+                    col.extend(list(range(mapper.rel_to_ind(intersect_start), mapper.rel_to_ind(intersect_end - 1) + 1)))
+                    for cpg in record.methylation[intersect_start - rel_start:intersect_end - rel_start]:
+                        data.append(methylation_state[cpg])
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_CpGs), dtype=int)
 
+class CoordsEpiread(Epiread_format):
 
-def snp_to_csr(epiread_iterator, snp_abs_to_rel, n_reads, max_snps):
+    def __init__(self, fp):
+        super().__init__(fp)
+        self.row = CoordsRow
+
+    def to_csr(self, mapper, intervals): #TODO: fix
+        row = []
+        col = []
+        data = []
+        rel_intervals = np.array(mapper.rel_intervals).flatten()
+        epiread_iterator = self.cut(intervals)
+        i=0
+        for i, epiread in enumerate(epiread_iterator):
+            record = self.row(*epiread.split(TAB))
+            rel_start = mapper.abs_to_rel[record.get_start()]
+            rel_end = mapper.abs_to_rel[record.get_end()]
+            for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
+
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_CpGs), dtype=int)
+
+class EpiSNP(Epiread_format):
+
+    def __init__(self, fp):
+        super().__init__(fp)
+
+    def to_csr(self, mapper, intervals): #problem: aligning
+        epiread_iterator = self.cut(intervals)
+        row = []
+        col = []
+        data = []
+        i = 0
+        for i, epiread in enumerate(epiread_iterator):
+            record = EpiRow(*epiread.split(TAB))
+            if record.has_snps():
+                rel_start = mapper.snp_abs_to_rel(record.get_snp_start())
+                for dist, snp in record.get_snps():
+                    if rel_start + int(dist) < mapper.max_snps and rel_start + int(dist):  # doesn't pass interval
+                        row.append(i)
+                        col.append(rel_start + int(dist))
+                        data.append(dna_to_ind[snp])
+        return sp.csr_matrix((data, (row, col)), shape=(i+1, mapper.max_snps), dtype=int)
+
+#%%
+#Row objects
+
+class EpiRow:
     '''
-    map snps from single source to sparse matrix
-    :param epiread_iterator: iterator of epiread records
-    :param snp_abs_to_rel: dict from genomic coordinates to relative
-    :param n_reads: number of methylation reads in iterator
-    :param max_snps: maximal number of snps
-    :return: sparse matrix of reads
+    epiread format includes: Chromosome name, Read name
+    Read position in paired-end sequencing, Bisulfite strand,
+    Position of the cytosine in the first CpG (0-based),  Retention pattern,
+    Position of the first SNP, Base call of all SNPs covered
+    min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
     '''
-    row= []
-    col = []
-    data = []
-    for i, epiread in enumerate(epiread_iterator):
-        record = asEpiread(*epiread.split(TAB))
-        if record.has_snps():
-            rel_start = snp_abs_to_rel(record.get_snp_start())
-            for dist, snp in record.get_snps():
-                if rel_start+int(dist) < max_snps and rel_start+int(dist): #doesn't pass interval
-                    row.append(i)
-                    col.append(rel_start+int(dist))
-                    data.append(dna_to_ind[snp])
-    return sp.csr_matrix((data, (row, col)), shape=(n_reads, max_snps), dtype=int)
+    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+                 snp_start="", snps="", origin=""):
+        self.chrom = chrom
+        self.min_start = min_start
+        self.max_end = max_end
+        self.read_name = read_name
+        self.read_pos = read_pos
+        self.strand = strand
+        self.read_start = read_start
+        self.methylation = methylation
+        self.snp_start = snp_start
+        self.snps = snps
+        self.origin=origin
+
+    def get_start(self):
+        '''
+        :return: read start e.g. 2100056
+        '''
+        return int(self.read_start)
+
+    def get_snps(self):
+        '''
+        :return: pairs of dist from start, SNP
+        e.g. 0:A
+        '''
+        if bool(__debug__): #true unless -O flag is used ###TODO: change
+            my_snps = re.sub("[\(\[].*?[\)\]]", "", self.snps).split(SNP_SEP)
+        else:
+            my_snps = self.snps.split(SNP_SEP)
+        for i in range(0, len(my_snps), 2):
+            yield (my_snps[i],my_snps[i+1])
+
+    def get_snp_start(self):
+        '''
+        :return: snp start, e.g. 213356
+        '''
+        try:
+            return int(self.snp_start)
+        except ValueError:
+            print("Record has no SNPs")
+            raise
+
+    def has_snps(self): #TODO: wrong
+        '''
+        :return: True if SNPs in read
+        '''
+        #check that snp_start isn't "."
+        return self.snp_start != NO_DATA
+
+    def __len__(self):
+        return len(self.methylation)
+
+    def __repr__(self):
+        return (TAB).join([self.chrom, self.read_name, self.read_pos, self.strand,\
+        self.read_start, self.methylation, self.snp_start,\
+        self.snps])
+
+class CoordsRow(EpiRow):
+    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
+                 snp_start=NO_DATA, snps=NO_DATA, origin=NO_DATA):
+        self.coords = [int(x) for x in coords.split(COORD_SEP)]
+        self.read_start = self.coords[0]
+        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
+                 snp_start, snps, origin)
+
+    def get_coord_methylation(self):
+        '''
+        pairs of coordinate, methylation
+        e.g. 2051767,C
+        :return:
+        '''
+        yield from zip(self.coords, self.methylation)
+
+    def get_end(self):
+        '''
+        get last coordinate
+        :return:
+        '''
+        return self.coords[-1]
+
+class SNPRow(EpiRow):
+
+    def __init__(self, **args):
+        pass
+
+
+format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP
+                    # "snps_with_comments": CommentEpiSNP
+                     }
+
+#%%
+
+
+chrom = "chr1"
+intervals = [GenomicInterval("chr1:205499888-205500131")]
+epiread_files = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/small_Pancreas-Beta-Z0000043H.after_fix_bug_dash_withA.epiread.gz"]
+cpg_file = "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz"
+epi_format = "old_epiread_A"
+parser = Parser(chrom, intervals, epiread_files, cpg_file, epi_format)
+parser.parse()
+
+
+
+
 
 
 
