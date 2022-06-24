@@ -85,22 +85,6 @@ class BedgraphRunner():
 
 #%%
 
-def parse_args(args):
-    argument_parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
-    argument_parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
-    argument_parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, ' +\
-                                         'separated by commas')
-    argument_parser.add_argument('outfile', help='path for output file')
-    argument_parser.add_argument('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas',
-                                 default=False)
-    argument_parser.add_argument('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
-                                 default=False)
-    argument_parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
-    argument_parser.add_argument('-A', '--coords', help='epiread files contain coords',
-                                 default=False)
-    return argument_parser.parse_args()
-
-
 @click.command()
 @click.argument('cpg_coordinates')
 @click.argument('epireads')
@@ -112,6 +96,7 @@ def parse_args(args):
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
     """ input cpg_coordinates file, epiread files separated by comma and output file"""
+    click.echo("biscuit epiread to bedgraph converter")
     epiread_files = epireads.split(",")
 
     if kwargs["intervals"]:
