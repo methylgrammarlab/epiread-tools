@@ -22,7 +22,7 @@ setuptools.setup(
     include_package_data=True,
     entry_points={
     "console_scripts":[
-    "epireadToBedgraph=epiread_tools.epireadToBedgraph.__main__:main"
+    "epireadToBedgraph=epiread_tools.epireadToBedgraph:main"
         ]
     },
 )
