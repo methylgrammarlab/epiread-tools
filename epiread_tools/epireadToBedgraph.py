@@ -7,6 +7,8 @@
 ###################################################
 
 import argparse
+import sys
+
 import numpy as np
 from  epiread_tools.epiparser import Parser
 from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes, bedgraph_to_intervals
@@ -71,7 +73,7 @@ class BedgraphRunner():
             output_array[i, :] = chrom, self.mapper.ind_to_abs(col_indices[i]), \
                                  self.mapper.ind_to_abs(col_indices[i])+ 1, self.mean_methylation[i], \
                                  self.coverage[col_indices[i]]
-        with open(self.outfile, "a") as outfile:
+        with open(self.outfile, "a+") as outfile:
             np.savetxt(outfile, output_array, delimiter=TAB, fmt='%s')
 
     def tobedgraph(self):
@@ -80,9 +82,10 @@ class BedgraphRunner():
             self.calc_coverage()
             self.calc_mean_methylation()
             self.write_bedgraph(chrom)
+
 #%%
 
-if __name__ == "__main":
+def parse_args(args):
     argument_parser = argparse.ArgumentParser(description='Transform epiread file(s) to bedgraph')
     argument_parser.add_argument('cpg_coordinates', help='file with coordinates of CpGs')
     argument_parser.add_argument('epireads', help='file(s) to process. gziiped and indexed. multiple files will be aggregated, ' +\
@@ -95,8 +98,11 @@ if __name__ == "__main":
     argument_parser.add_argument('-d', '--header', action='store_true', help="bedgraph with regions to process has header")
     argument_parser.add_argument('-A', '--coords', help='epiread files contain coords',
                                  default=False)
+    return argument_parser.parse_args()
 
-    args = argument_parser.parse_args()
+
+if __name__ == "__main":
+    args = parse_args(sys.argv[1:])
     epiread_files = args.epireads.split(",")
 
     if args.intervals:

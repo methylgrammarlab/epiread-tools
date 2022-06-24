@@ -19,5 +19,6 @@ setuptools.setup(
     packages=['epiread_tools'],
     package_dir={"src": "src"},
     install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam'],
+    scripts=['epiread_tools/epireadToBedgraph.py'],
 
 )
