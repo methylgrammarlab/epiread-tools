@@ -95,8 +95,7 @@ class BedgraphRunner():
 @click.option('--header', is_flag=True, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
-    """ input cpg_coordinates file, epiread files separated by comma and output file"""
-    click.echo("biscuit epiread to bedgraph converter")
+    """ biscuit epiread to bedgraph converter"""
     epiread_files = epireads.split(",")
 
     if kwargs["intervals"]:
