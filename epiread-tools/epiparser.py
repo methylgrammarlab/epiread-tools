@@ -113,7 +113,7 @@ class Epiread_format:
                     col.extend(list(range(mapper.rel_to_ind(intersect_start), mapper.rel_to_ind(intersect_end - 1) + 1)))
                     for cpg in record.methylation[intersect_start - rel_start:intersect_end - rel_start]:
                         data.append(methylation_state[cpg])
-        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_CpGs), dtype=int)
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
 class CoordsEpiread(Epiread_format):
 
@@ -134,7 +134,7 @@ class CoordsEpiread(Epiread_format):
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
                     data.append(methylation_state[cpg])
-        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_CpGs), dtype=int)
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
 class EpiSNP(Epiread_format):
 
@@ -195,41 +195,19 @@ class EpiRow:
         '''
         return int(self.read_start)
 
-    def get_snps(self):
-        '''
-        :return: pairs of dist from start, SNP
-        e.g. 0:A
-        '''
-        if bool(__debug__): #true unless -O flag is used ###TODO: change
-            my_snps = re.sub("[\(\[].*?[\)\]]", "", self.snps).split(SNP_SEP)
-        else:
-            my_snps = self.snps.split(SNP_SEP)
-        for i in range(0, len(my_snps), 2):
-            yield (my_snps[i],my_snps[i+1])
-
-    def get_snp_start(self):
-        '''
-        :return: snp start, e.g. 213356
-        '''
-        try:
-            return int(self.snp_start)
-        except ValueError:
-            print("Record has no SNPs")
-            raise
-
-    def has_snps(self): #TODO: wrong
+    def has_snps(self):
         '''
         :return: True if SNPs in read
         '''
         #check that snp_start isn't "."
-        return self.snp_start != NO_DATA
+        return len(self.snp_start) and (self.snp_start != NO_DATA)
 
     def __len__(self):
         return len(self.methylation)
 
-    def __repr__(self): #TODO: fix
-        return (TAB).join([self.chrom, self.read_name, self.read_pos, self.strand,\
-        self.read_start, self.methylation, self.snp_start,\
+    def __repr__(self):
+        return (TAB).join([self.chrom, self.read_name, str(self.read_pos), self.strand,\
+        str(self.read_start), self.methylation, str(self.snp_start),\
         self.snps])
 
 class CoordsRow(EpiRow):
@@ -257,22 +235,42 @@ class CoordsRow(EpiRow):
 
 class SNPRow(EpiRow):
 
-    def __init__(self, **args):
-        pass
+    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+                 snp_start="", snps="", origin=""):
+        super.__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+                 snp_start, snps, origin)
+        self.snps = snps.split(SNP_SEP)
+
+    def get_snps(self):
+        '''
+        :return: pairs of dist from start, SNP
+        e.g. 0:A
+        '''
+        for i in range(0, len(self.snps), 2):
+            yield (my_snps[i],my_snps[i+1])
+
+    def get_snp_start(self):
+        '''
+        :return: snp start, e.g. 213356
+        '''
+        try:
+            return int(self.snp_start)
+        except ValueError:
+            raise("Record has no SNPs")
+
 
 class CommentEpiSNPRow(SNPRow):
-    def __init__(self):
-        pass
-
+    def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+                 snp_start="", snps="", origin=""):
+        super.__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+                 snp_start, snps, origin)
+        self.snps = re.sub("[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
 
 format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP,
                     "snps_with_comments": CommentEpiSNP
                      }
 
 #%%
-#TODO:
-# test SNP parsing
-# decide if SNPs belong in EpiRow
 
 chrom = "chr1"
 intervals = [GenomicInterval("chr1:205499888-205500131")]

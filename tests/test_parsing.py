@@ -1,4 +1,4 @@
-import unittest
+import pytest
 from epiread-tools.naming_conventions import *
 
 
@@ -15,6 +15,7 @@ class MyTestCase(unittest.TestCase):
         # bedfile=False
         # runner = BedgraphRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile, header, bedfile)
         # runner.tobedgraph()
+        pass
 
     def test_bedgraph_from_bedfile(self):
         pass
