@@ -12,12 +12,20 @@ from  epiread_tools.em_utils import Mapper, find_intersection, GenomicInterval
 import scipy.sparse as sp
 import os
 import re
+# import sys
+# sys.path.insert(0, os.path.abspath('..'))
 #%%
 
+def tabix_verify(fp):
+    print(os.getcwd())
+    assert os.path.isfile(fp)  # file exists
+    assert fp.endswith(".gz")  # gzipped file
+    assert os.path.isfile(fp + ".tbi")  # index file exists
 
 class Parser:
     '''
     read epiread data into scipy matrix
+    each row is read even if it is empty e.g. NN-N
     '''
 
     def __init__(self,chrom, intervals, epiread_files, CpG_file, epi_format):
@@ -32,6 +40,7 @@ class Parser:
         self.chrom = chrom
         self.intervals = intervals
         self.epiread_files = epiread_files
+        tabix_verify(CpG_file)
         self.CpG_file = CpG_file
         self.init_mapper()
         self.epiformat = epi_format
@@ -72,15 +81,9 @@ class Epiread_format:
     min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
     '''
     def __init__(self, fp):
+        tabix_verify(fp)
         self.fp = fp
-        self.verify_input()
         self.row = EpiRow
-
-    def verify_input(self):
-        assert os.path.isfile(self.fp) #file exists
-        assert self.fp.endswith(".gz") #gzipped file
-        assert os.path.isfile(self.fp+".tbi") #index file exists
-
 
     def cut(self, intervals):
         '''
@@ -140,7 +143,7 @@ class EpiSNP(Epiread_format):
 
     def __init__(self, fp):
         super().__init__(fp)
-        self.row = SNPRow #TODO: row should only contain SNPs
+        self.row = SNPRow
 
     def to_csr(self, mapper, intervals): #problem: aligning
         epiread_iterator = self.cut(intervals)
@@ -162,7 +165,7 @@ class EpiSNP(Epiread_format):
 class CommentEpiSNP(EpiSNP):
     def __init__(self, fp):
         super().__init__(fp)
-        self.row = CommentEpiSNPRow #TODO: row should only contain SNPs
+        self.row = CommentEpiSNPRow
 
 #%%
 #Row objects
@@ -212,7 +215,7 @@ class EpiRow:
 
 class CoordsRow(EpiRow):
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
-                 snp_start=NO_DATA, snps=NO_DATA, origin=NO_DATA):
+                 snp_start="", snps="", origin=""):
         self.coords = [int(x) for x in coords.split(COORD_SEP)]
         self.read_start = self.coords[0]
         super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
@@ -237,7 +240,7 @@ class SNPRow(EpiRow):
 
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start="", snps="", origin=""):
-        super.__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start, snps, origin)
         self.snps = snps.split(SNP_SEP)
 
@@ -247,7 +250,7 @@ class SNPRow(EpiRow):
         e.g. 0:A
         '''
         for i in range(0, len(self.snps), 2):
-            yield (my_snps[i],my_snps[i+1])
+            yield (self.snps[i],self.snps[i+1])
 
     def get_snp_start(self):
         '''
@@ -262,7 +265,7 @@ class SNPRow(EpiRow):
 class CommentEpiSNPRow(SNPRow):
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start="", snps="", origin=""):
-        super.__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
+        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start, snps, origin)
         self.snps = re.sub("[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
 
@@ -273,16 +276,11 @@ format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpirea
 #%%
 
 # chrom = "chr1"
-# intervals = [GenomicInterval("chr1:205499888-205500131")]
-# epiread_files = ["/Users/ireneu/PycharmProjects/epiread_tools/tests/small_Pancreas-Beta-Z0000043H.after_fix_bug_dash_withA.epiread.gz"]
-# cpg_file = "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz"
-# epi_format = "old_epiread_A"
+# intervals = [GenomicInterval("chr1:205499880-205500150")]
+# cpg_file = "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/sample_cpg_file.bed.gz"
+# epiread_files = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
+# epi_format = "snps_with_comments"
 # parser = Parser(chrom, intervals, epiread_files, cpg_file, epi_format)
 # parser.parse()
-
-
-
-
-
 
 

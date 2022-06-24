@@ -75,8 +75,6 @@ class GenomicInterval:
         return self.get_genomic_size()
 
 
-
-
 class Mapper:
     '''
     keeps mapping from genomic to relative and vice versa
