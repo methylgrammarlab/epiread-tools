@@ -18,11 +18,11 @@ setuptools.setup(
     license='MIT',
     packages=['epiread_tools'],
     package_dir={"src": "src"},
-    install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam'],
+    install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam', "Click"],
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'epireadToBedgraph = epireadToBedgraph:main',
+            'epireadToBedgraph = epiread_tools.epireadToBedgraph:main',
         ],
     },
 )
