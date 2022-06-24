@@ -7,8 +7,8 @@
 
 import numpy as np
 import pysam
-from naming_conventions import *
-from em_utils import Mapper, find_intersection, GenomicInterval
+from  epiread_tools.naming_conventions import *
+from  epiread_tools.em_utils import Mapper, find_intersection, GenomicInterval
 import scipy.sparse as sp
 import os
 import re
@@ -272,13 +272,13 @@ format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpirea
 
 #%%
 
-chrom = "chr1"
-intervals = [GenomicInterval("chr1:205499888-205500131")]
-epiread_files = ["/Users/ireneu/PycharmProjects/epiread_tools/tests/small_Pancreas-Beta-Z0000043H.after_fix_bug_dash_withA.epiread.gz"]
-cpg_file = "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz"
-epi_format = "old_epiread_A"
-parser = Parser(chrom, intervals, epiread_files, cpg_file, epi_format)
-parser.parse()
+# chrom = "chr1"
+# intervals = [GenomicInterval("chr1:205499888-205500131")]
+# epiread_files = ["/Users/ireneu/PycharmProjects/epiread_tools/tests/small_Pancreas-Beta-Z0000043H.after_fix_bug_dash_withA.epiread.gz"]
+# cpg_file = "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz"
+# epi_format = "old_epiread_A"
+# parser = Parser(chrom, intervals, epiread_files, cpg_file, epi_format)
+# parser.parse()
 
 
 

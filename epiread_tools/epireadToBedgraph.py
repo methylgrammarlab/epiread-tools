@@ -8,16 +8,16 @@
 
 import argparse
 import numpy as np
-from epiparser import Parser
-from em_utils import GenomicInterval, split_intervals_to_chromosomes, bedgraph_to_intervals
-from naming_conventions import *
+from  epiread_tools.epiparser import Parser
+from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes, bedgraph_to_intervals
+from epiread_tools.naming_conventions import *
 
 
 class BedgraphRunner():
 
-    def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, epiformat, header=False, bedgraph=True):
+    def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, epiformat, header=False, bedfile=True):
         self.header = header
-        if bedgraph:
+        if bedfile:
             self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
         else:
             self.genomic_intervals = [GenomicInterval(x) for x in genomic_intervals]
@@ -35,7 +35,7 @@ class BedgraphRunner():
         get data amd mapper
         :return:
         '''
-        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epi_format)
+        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epiformat)
         self.methylation_matrix, self.mapper = parser.parse()
 
 

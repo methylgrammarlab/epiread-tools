@@ -5,7 +5,7 @@
 # Description: useful classes and functions to
 # handle WGBS data
 ###################################################
-from naming_conventions import *
+from  epiread_tools.naming_conventions import *
 import numpy as np
 import pandas as pd
 from itertools import chain
