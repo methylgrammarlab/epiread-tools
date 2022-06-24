@@ -75,8 +75,6 @@ class BedgraphRunner():
             np.savetxt(outfile, output_array, delimiter=TAB, fmt='%s')
 
     def tobedgraph(self):
-        #first split by chromosome
-        self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
         for chrom, intervals in self.intervals_per_chrom.items():
             self.parse_reads(chrom, intervals)
             self.calc_coverage()

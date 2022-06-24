@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='epiread-tools',
+    name='epiread_tools',
     version='0.0.1',
     author='Irene Unterman',
     author_email='irene.guberman@mail.huji.ac.il',
@@ -16,7 +16,7 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/methylgrammarlab/epiread-tools/issues"
     },
     license='MIT',
-    packages=['epiread-tools'],
+    packages=['epiread_tools'],
     package_dir={"src": "src"},
     install_requires=['argparse', 'numpy', 'pandas', 'scipy', 'pysam'],
 
