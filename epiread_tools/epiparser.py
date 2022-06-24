@@ -273,14 +273,3 @@ format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpirea
                     "snps_with_comments": CommentEpiSNP
                      }
 
-#%%
-
-# chrom = "chr1"
-# intervals = [GenomicInterval("chr1:205499880-205500150")]
-# cpg_file = "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/sample_cpg_file.bed.gz"
-# epiread_files = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
-# epi_format = "snps_with_comments"
-# parser = Parser(chrom, intervals, epiread_files, cpg_file, epi_format)
-# parser.parse()
-
-
