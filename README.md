@@ -15,4 +15,5 @@ convert epiread to bedgraph
 python3 epireadToBedgraph.py <cpg_coordinates_file> <epiread> <run_name> <output_file> -i < regions, e.g.: chr1:205500000-205700000,chr10:17400000-17600000>
 ```
 
+To parse epiread with cpg coordinates use flag -A
 
