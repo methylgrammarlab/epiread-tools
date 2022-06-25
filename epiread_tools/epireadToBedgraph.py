@@ -15,7 +15,7 @@ from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromoso
 from epiread_tools.naming_conventions import *
 
 
-class BedgraphRunner():
+class EpiRunner():
 
     def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, epiformat, header=False, bedfile=True):
         self.header = header
@@ -30,15 +30,30 @@ class BedgraphRunner():
         self.outfile = outfile
         self.epiformat = epiformat
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
+        self.matrices = []
+        self.interval_order = []
+        self.cpgs = []
 
 
-    def parse_reads(self, chrom, intervals):
+    def parse_one_chromosome(self, chrom, intervals):
         '''
         get data amd mapper
         :return:
         '''
+        intervals = sorted(intervals, key=lambda x: x.start)
+        self.interval_order.extend(intervals)
         parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epiformat)
-        self.methylation_matrix, self.mapper = parser.parse()
+        methylation_matrix, mapper = parser.parse()
+        window_list = mapper.get_ind_intervals(intervals)
+        for start, end in window_list:
+            slice = methylation_matrix[:,start:end]
+            self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
+            self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
+
+
+    def parse_multiple_chromosomes(self):
+        for chrom, intervals in self.intervals_per_chrom.items():
+            self.parse_one_chromosome(chrom, intervals)
 
 
     def calc_coverage(self):
@@ -46,42 +61,50 @@ class BedgraphRunner():
         calculate coverage per CpG
         :return:
         '''
-        self.coverage = np.squeeze(np.asarray((self.methylation_matrix == METHYLATED).sum(axis=0)))+ \
-                        np.squeeze(np.asarray((self.methylation_matrix == UNMETHYLATED).sum(axis=0)))
+        self.coverage = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))+ \
+                        np.squeeze(np.asarray((methylation_matrix == UNMETHYLATED).sum(axis=0)))
+                         for methylation_matrix in self.matrices]
 
     def calc_methylated(self):
-        self.methylation = np.squeeze(np.asarray((self.methylation_matrix == METHYLATED).sum(axis=0)))
+        self.methylation = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))
+                            for methylation_matrix in self.matrices]
 
     def calc_mean_methylation(self):
         '''
         mean methylation per CpG with coverage
         :return:
         '''
-        methylated_per_col = np.squeeze(np.asarray((self.methylation_matrix == METHYLATED).sum(axis=0)))
         #skip all-zero columns, save indices for later
-        self.mean_methylation = np.divide(methylated_per_col[self.coverage>0],self.coverage[self.coverage>0])
+        self.mean_methylation = []
+        for i in range(len(self.matrices)):
+            mean_methylation = np.divide(self.methylation[i],self.coverage[i],where=self.coverage[i]>0)
+            self.mean_methylation.append(mean_methylation)
 
-    def write_bedgraph(self, chrom):
+    def write_bedgraph(self):
         '''
-        append chromosome output to output file
-        :param chrom: chromosome name
+        append output to output file
         :return:
         '''
-        col_indices = np.arange(len(self.coverage))[self.coverage>0]
-        output_array = np.zeros(shape=(len(col_indices), 5), dtype=object)
-        for i in range(len(col_indices)):
-            output_array[i, :] = chrom, self.mapper.ind_to_abs(col_indices[i]), \
-                                 self.mapper.ind_to_abs(col_indices[i])+ 1, self.mean_methylation[i], \
-                                 self.coverage[col_indices[i]]
-        with open(self.outfile, "a+") as outfile:
-            np.savetxt(outfile, output_array, delimiter=TAB, fmt='%s')
+        out_arrs = []
+        for i, interval in enumerate(self.interval_order):
+            arr=np.zeros(shape=(len(self.cpgs[i]), 5), dtype=object)
+            arr[:,0]=interval.chrom
+            arr[:,1]=self.cpgs[i]
+            arr[:,2]=self.cpgs[i] + 1
+            arr[:,3]=self.mean_methylation[i]
+            arr[:,4]=self.coverage[i]
+            arr = arr[self.coverage[i]>0,:]
+            out_arrs.append(arr)
+
+        with open(self.outfile, "w") as outfile:
+            np.savetxt(outfile, np.vstack(out_arrs), delimiter=TAB, fmt='%s')
 
     def tobedgraph(self):
-        for chrom, intervals in self.intervals_per_chrom.items():
-            self.parse_reads(chrom, intervals)
-            self.calc_coverage()
-            self.calc_mean_methylation()
-            self.write_bedgraph(chrom)
+        self.parse_multiple_chromosomes()
+        self.calc_coverage()
+        self.calc_methylated()
+        self.calc_mean_methylation()
+        self.write_bedgraph()
 
 #%%
 
@@ -107,10 +130,17 @@ def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
     epiformat = "old_epiread"
     if kwargs["coords"]:
         epiformat = "old_epiread_A"
-    runner = BedgraphRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile, epiformat,
-                            kwargs["header"], kwargs["bedfile"])
+    runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile, epiformat,
+                       kwargs["header"], kwargs["bedfile"])
     runner.tobedgraph()
 
 
 if __name__ == '__main__':
     main()
+#%%
+# genomic_intervals=["chr1:205499880-205500150","chr1:205499880-205500150"]
+# cpg_coordinates = "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/sample_cpg_file.bed.gz"
+# epiread_files = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
+# runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile=None, epiformat="old_epiread_A",
+#                    header=False, bedfile=False)
+# runner.tobedgraph()

@@ -115,7 +115,7 @@ class Mapper:
         bins = np.sort(np.array(bins))
         bins[::2] -= padding
         bins[1::2] += padding
-        bins = np.array(list(chain.from_iterable(merge_win_list(list(zip(bins[::2], bins[1::2]))))))#TODO: change!!!
+        bins = np.array(list(chain.from_iterable(merge_win_list(list(zip(bins[::2], bins[1::2]))))))#TODO: change, hard to read
         sizes = np.array([y-x for x, y in zip(bins[::2], bins[1::2])])
         cum_sizes = np.append(np.zeros(1), np.cumsum(sizes)).astype(int)
         max_snps = cum_sizes[-1]
