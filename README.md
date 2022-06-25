@@ -23,13 +23,18 @@ python setup.py install
 
 convert epiread to bedgraph
 ```
-python3 epireadToBedgraph.py <cpg_coordinates_file> <epiread> <output_file> -i < regions, e.g.: chr1:205500000-205700000,chr10:17400000-17600000>
-```
-
-theoretically, this should also work:
-```
 epireadToBedgraph <cpg_coordinates_file> <epiread> <output_file> -i < regions, e.g.: chr1:205500000-205700000,chr10:17400000-17600000>
 ```
 
 To parse epiread with cpg coordinates use flag -A
+
+if for some reason that doesn't work (Command not found), just find the script with
+```
+pip show epiread_tools
+```
+and run
+```
+python3 epireadToBedgraph.py <cpg_coordinates_file> <epiread> <output_file> -i < regions, e.g.: chr1:205500000-205700000,chr10:17400000-17600000>
+```
+
 
