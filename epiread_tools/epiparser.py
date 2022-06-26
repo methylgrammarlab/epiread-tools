@@ -220,6 +220,8 @@ class CoordsRow(EpiRow):
         self.read_start = self.coords[0]
         super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
                  snp_start, snps, origin)
+        assert (len(self.coords) == len(self.methylation),
+                "unequal length of coordinates and methylation, did you mean old_epiread?")
 
     def get_coord_methylation(self):
         '''
@@ -267,7 +269,7 @@ class CommentEpiSNPRow(SNPRow):
                  snp_start="", snps="", origin=""):
         super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start, snps, origin)
-        self.snps = re.sub("[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
+        self.snps = re.sub(r"[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
 
 format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP,
                     "snps_with_comments": CommentEpiSNP

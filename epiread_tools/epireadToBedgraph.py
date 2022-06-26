@@ -138,9 +138,14 @@ def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
 if __name__ == '__main__':
     main()
 #%%
-# genomic_intervals=["chr1:205499880-205500150","chr1:205499880-205500150"]
+
+# genomic_intervals=["chr1:205511000-205511700"]
 # cpg_coordinates = "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/sample_cpg_file.bed.gz"
-# epiread_files = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
-# runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile=None, epiformat="old_epiread_A",
+# with_A = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/problem_with_A.epiread.gz"]
+# without_A = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/problem_without_A.epiread.gz"]
+# new_runner = EpiRunner(genomic_intervals, cpg_coordinates, with_A, outfile=None, epiformat="old_epiread_A",
 #                    header=False, bedfile=False)
-# runner.tobedgraph()
+# new_runner.parse_multiple_chromosomes()
+# old_runner = EpiRunner(genomic_intervals, cpg_coordinates, without_A, outfile=None, epiformat="old_epiread",
+#                    header=False, bedfile=False)
+# old_runner.parse_multiple_chromosomes()

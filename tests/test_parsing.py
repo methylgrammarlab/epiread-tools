@@ -14,9 +14,8 @@ def test_bedgraph_from_intervals():
     epiread_files = ["tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
     runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile=None, epiformat="old_epiread_A",
                        header=False, bedfile=False)
-    for chrom, intervals in runner.intervals_per_chrom.items():
-        runner.parse_one_chromosome(chrom, intervals)
-    assert runner.methylation_matrix.shape == (15,3)
+    runner.parse_multiple_chromosomes()
+    assert runner.matrices[0].shape == (15,3)
 
 def test_snps():
     chrom = "chr1"
@@ -28,6 +27,19 @@ def test_snps():
     mat, mapper = parser.parse()
     assert mat.shape[0] == 15
     assert (mat[:,2141].toarray().flatten() == np.array([Y,A,C,C,A,A,Y,A,C,A] + [NOVAL]*5)).all()
+
+def test_epiread_formats():
+    intervals=[GenomicInterval("chr1:205511000-205511700")]
+    cpg_coordinates = "tests/data/sample_cpg_file.bed.gz"
+    with_A = ["tests/data/problem_with_A.epiread.gz"]
+    without_A = ["tests/data/problem_without_A.epiread.gz"]
+    parser_A = Parser("chr1", intervals, with_A, cpg_coordinates, "old_epiread_A")
+    mat_A, mapper_A = parser_A.parse()
+    parser = Parser("chr1", intervals, without_A, cpg_coordinates, "old_epiread")
+    mat, mapper = parser.parse()
+
+    assert mat_A[:,mapper_A.abs_to_ind(205511553)].sum() == mat[:,mapper.abs_to_ind(205511553)].sum()
+
 
 
 def test_bedgraph_from_bedfile():
