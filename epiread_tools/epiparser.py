@@ -80,7 +80,7 @@ class Epiread_format:
     min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
     '''
     def __init__(self, fp):
-        tabix_verify(fp)
+        # tabix_verify(fp)
         self.fp = fp
         self.row = EpiRow
 
