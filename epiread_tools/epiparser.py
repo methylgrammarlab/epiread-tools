@@ -17,7 +17,6 @@ import re
 #%%
 
 def tabix_verify(fp):
-    print(os.getcwd())
     assert os.path.isfile(fp)  # file exists
     assert fp.endswith(".gz")  # gzipped file
     assert os.path.isfile(fp + ".tbi")  # index file exists
