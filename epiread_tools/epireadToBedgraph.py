@@ -93,8 +93,12 @@ class EpiRunner():
             arr[:,2]=self.cpgs[i] + 1
             arr[:,3]=self.mean_methylation[i]
             arr[:,4]=self.coverage[i]
-            arr = arr[[self.coverage[i]>0],:]
-            out_arrs.append(arr)
+            if len(self.coverage[i]) > 1: #doesn't work when length == 1
+                arr = arr[(self.coverage[i]>0),:]
+            elif len(self.coverage[i]) == 1 and not self.coverage[i][0]:
+                arr = np.array([]) #no coverage
+            if arr.any():
+                out_arrs.append(arr)
 
         with open(self.outfile, "w") as outfile:
             np.savetxt(outfile, np.vstack(out_arrs), delimiter=TAB, fmt='%s')
@@ -117,6 +121,7 @@ class EpiRunner():
               is_flag=True, default=False)
 @click.option('--header', is_flag=True, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
+@click.version_option()
 def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
     """ biscuit epiread to bedgraph converter"""
     epiread_files = epireads.split(",")
@@ -138,4 +143,3 @@ def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
 if __name__ == '__main__':
     main()
 #%%
-

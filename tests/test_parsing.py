@@ -9,7 +9,7 @@ import os
 
 
 def test_bedgraph_from_intervals():
-    genomic_intervals=["chr1:205499880-205500150"]
+    genomic_intervals=["chr1:205499880-205500150","chr10:17599401-17600087"]
     cpg_coordinates = "tests/data/sample_cpg_file.bed.gz"
     epiread_files = ["tests/data/old_epiread_A_snps_with_comments.epiread.gz"]
     runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile=None, epiformat="old_epiread_A",
