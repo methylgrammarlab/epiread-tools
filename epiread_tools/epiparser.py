@@ -6,6 +6,7 @@
 ###################################################
 
 import numpy as np
+import pandas as pd
 import pysam
 from  epiread_tools.naming_conventions import *
 from  epiread_tools.em_utils import Mapper, find_intersection, GenomicInterval
@@ -39,11 +40,12 @@ class Parser:
         self.chrom = chrom
         self.intervals = intervals
         self.epiread_files = epiread_files
-        tabix_verify(CpG_file)
+        # tabix_verify(CpG_file)
         self.CpG_file = CpG_file
         self.init_mapper()
         self.epiformat = epi_format
-        self.fileobj= format_to_fileobj[self.epiformat]
+        self.fileobj = format_to_fileobj[self.epiformat]
+        #TODO: possibly faster to store file objects and reuse with each chrom?
 
     def init_mapper(self):
         '''
@@ -138,6 +140,7 @@ class CoordsEpiread(Epiread_format):
                     data.append(methylation_state[cpg])
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
+
 class EpiSNP(Epiread_format):
 
     def __init__(self, fp):
@@ -165,6 +168,45 @@ class CommentEpiSNP(EpiSNP):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = CommentEpiSNPRow
+
+
+class Atlas_format(Epiread_format):
+    '''
+    atlas has a structure of
+    CHROM START END A_METH A_COV B_METH B_COV
+    with a header line
+    '''
+
+    def __init__(self, fp):
+        super().__init__(fp)
+        self.row = None
+        self.init_beta()
+
+    def init_beta(self):
+        df = pd.read_csv(self.fp, sep="\t")
+        vals = df.iloc[:, 3:].values
+        beta = vals[:, ::2] / vals[:, 1::2]
+        self.beta = beta.T
+        self.atlas_chrom = df["CHROM"].values
+        self.atlas_start = df["START"].values  # remove if 0 based
+
+    def to_csr(self, mapper):
+
+        mat = np.ones(shape=(self.beta.shape[0], mapper.max_cpgs))  # cell types by cpgs
+        mat.fill(np.nan)
+        chrom_filter = (self.atlas_chrom == mapper.chrom)
+        cpgs = self.atlas_start[chrom_filter]
+        for i, cpg in enumerate(cpgs):
+            if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
+                mat[:, mapper.abs_to_ind(cpg)] = self.beta[:, chrom_filter][:, i]
+            elif (cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] not in mapper.all_rel):
+                # not in intervals, skip
+                print("not in intervals", cpg)
+                pass
+            else:
+                raise KeyError(cpg, "atlas start doesn't match cpg file")
+        return sp.csr_matrix(mat)
+
 
 #%%
 #Row objects
@@ -271,6 +313,6 @@ class CommentEpiSNPRow(SNPRow):
         self.snps = re.sub(r"[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
 
 format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP,
-                    "snps_with_comments": CommentEpiSNP
+                    "snps_with_comments": CommentEpiSNP, "atlas":Atlas_format
                      }
 
