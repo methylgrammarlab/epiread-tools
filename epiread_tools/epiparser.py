@@ -61,7 +61,7 @@ class Parser:
         sources = []
         i = 0
         for epi_file in self.epiread_files:
-            small_matrix = self.fileobj(epi_file).to_csr(self.mapper, self.intervals)
+            small_matrix = self.fileobj(epi_file).to_csr(self.mapper)
             small_matrices.append(small_matrix)
             sources.append((i, i + small_matrix.shape[0], self.mapper.sample_to_id[epi_file]))
             i += small_matrix.shape[0]
@@ -98,13 +98,13 @@ class Epiread_format:
             except ValueError:  # no coverage for this region in file
                 continue
 
-    def to_csr(self, mapper, intervals):
+    def to_csr(self, mapper):
         row = []
         col = []
         data = []
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
-        epiread_iterator = self.cut(intervals)
+        epiread_iterator = self.cut(mapper.merged_intervals)
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             rel_start = mapper.abs_to_rel[record.get_start()]
@@ -123,11 +123,11 @@ class CoordsEpiread(Epiread_format):
         super().__init__(fp)
         self.row = CoordsRow
 
-    def to_csr(self, mapper, intervals):
+    def to_csr(self, mapper):
         row = []
         col = []
         data = []
-        epiread_iterator = self.cut(intervals)
+        epiread_iterator = self.cut(mapper.merged_intervals)
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -144,8 +144,8 @@ class EpiSNP(Epiread_format):
         super().__init__(fp)
         self.row = SNPRow
 
-    def to_csr(self, mapper, intervals): #problem: aligning
-        epiread_iterator = self.cut(intervals)
+    def to_csr(self, mapper): #problem: aligning
+        epiread_iterator = self.cut(mapper.merged_intervals)
         row = []
         col = []
         data = []

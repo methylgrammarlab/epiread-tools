@@ -40,6 +40,19 @@ def test_epiread_formats():
 
     assert mat_A[:,mapper_A.abs_to_ind(205511553)].sum() == mat[:,mapper.abs_to_ind(205511553)].sum()
 
+def test_overlapping_regions():
+    genomic_intervals = ["chr1:205511552-205511555", "chr1:205511552-205511555"]
+    cpg_coordinates = "tests/data/sample_cpg_file.bed.gz"
+    epiread = ["tests/data/fixed_withA.epiread.gz"]
+    runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread,
+                           outfile=None,
+                           epiformat="old_epiread_A",
+                           header=False, bedfile=False)
+    runner.parse_multiple_chromosomes()
+    runner.calc_coverage()
+    assert runner.coverage[0]==runner.coverage[1]
+    assert runner.coverage[0]==16
+
 
 
 def test_bedgraph_from_bedfile():

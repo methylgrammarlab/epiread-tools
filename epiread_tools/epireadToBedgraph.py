@@ -93,7 +93,7 @@ class EpiRunner():
             arr[:,2]=self.cpgs[i] + 1
             arr[:,3]=self.mean_methylation[i]
             arr[:,4]=self.coverage[i]
-            arr = arr[self.coverage[i]>0,:]
+            arr = arr[[self.coverage[i]>0],:]
             out_arrs.append(arr)
 
         with open(self.outfile, "w") as outfile:
@@ -139,13 +139,3 @@ if __name__ == '__main__':
     main()
 #%%
 
-# genomic_intervals=["chr1:205511000-205511700"]
-# cpg_coordinates = "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/sample_cpg_file.bed.gz"
-# with_A = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/problem_with_A.epiread.gz"]
-# without_A = ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/problem_without_A.epiread.gz"]
-# new_runner = EpiRunner(genomic_intervals, cpg_coordinates, with_A, outfile=None, epiformat="old_epiread_A",
-#                    header=False, bedfile=False)
-# new_runner.parse_multiple_chromosomes()
-# old_runner = EpiRunner(genomic_intervals, cpg_coordinates, without_A, outfile=None, epiformat="old_epiread",
-#                    header=False, bedfile=False)
-# old_runner.parse_multiple_chromosomes()
