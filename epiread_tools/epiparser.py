@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 import pysam
 from  epiread_tools.naming_conventions import *
-from  epiread_tools.em_utils import Mapper, find_intersection, GenomicInterval
+from  epiread_tools.em_utils import Mapper, find_intersection, bedgraph_to_intervals
+from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes
 import scipy.sparse as sp
 import os
 import re
@@ -17,35 +18,40 @@ import re
 # sys.path.insert(0, os.path.abspath('..'))
 #%%
 
-def tabix_verify(fp):
-    assert os.path.isfile(fp)  # file exists
-    assert fp.endswith(".gz")  # gzipped file
-    assert os.path.isfile(fp + ".tbi")  # index file exists
-
-class Parser:
+class EpireadReader:
     '''
     read epiread data into scipy matrix
     each row is read even if it is empty e.g. NN-N
     '''
+    def __init__(self, config):
+        pass
 
-    def __init__(self,chrom, intervals, epiread_files, CpG_file, epi_format):
-        '''
+        if config['bedfile']:
+            self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
+        else:
+            self.genomic_intervals = [GenomicInterval(x) for x in genomic_intervals]
+        self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
 
-        :param chrom: chromosome name
-        :param intervals: GenpmicInterval list
-        :param epiread_files: list of filepaths
-        :param CpG_file: file with coordinates of cpgs in genome
-        :param epi_format: epiread file format
+
+    def parse_one_chromosome(self, chrom, intervals):
         '''
-        self.chrom = chrom
-        self.intervals = intervals
-        self.epiread_files = epiread_files
-        # tabix_verify(CpG_file)
-        self.CpG_file = CpG_file
-        self.init_mapper()
-        self.epiformat = epi_format
-        self.fileobj = format_to_fileobj[self.epiformat]
-        #TODO: possibly faster to store file objects and reuse with each chrom?
+        get data amd mapper
+        :return:
+        '''
+        intervals = sorted(intervals, key=lambda x: x.start)
+        self.interval_order.extend(intervals)
+        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epiformat)
+        methylation_matrix, mapper = parser.parse()
+        window_list = mapper.get_ind_intervals(intervals)
+        for start, end in window_list:
+            slice = methylation_matrix[:,start:end]
+            self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
+            self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
+
+    @staticmethod
+    def parse_multiple_chromosomes(self):
+        for chrom, intervals in self.intervals_per_chrom.items():
+            self.parse_one_chromosome(chrom, intervals)
 
     def init_mapper(self):
         '''
@@ -70,21 +76,6 @@ class Parser:
         self.mapper.init_index_to_source(sources)
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
         return methylation_matrix, self.mapper
-#%%
-#epiread objects
-
-class Epiread_format:
-    '''
-    epiread format includes: Chromosome name, Read name
-    Read position in paired-end sequencing, Bisulfite strand,
-    Position of the cytosine in the first CpG (0-based),  Retention pattern,
-    Position of the first SNP, Base call of all SNPs covered
-    min_start  is min(firstSNP,firstCpG) and max_end is max(lastSNP,lastCpG)
-    '''
-    def __init__(self, fp):
-        # tabix_verify(fp)
-        self.fp = fp
-        self.row = EpiRow
 
     def cut(self, intervals):
         '''
@@ -119,7 +110,16 @@ class Epiread_format:
                         data.append(methylation_state[cpg])
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
-class CoordsEpiread(Epiread_format):
+class AtlasReader:
+    def __init__(self, config):
+        pass
+
+    def parse(self, infile, output_format):
+        pass
+#%%
+#epiread objects
+
+class CoordsEpiread(EpireadReader):
 
     def __init__(self, fp):
         super().__init__(fp)
@@ -140,8 +140,7 @@ class CoordsEpiread(Epiread_format):
                     data.append(methylation_state[cpg])
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
-
-class EpiSNP(Epiread_format):
+class EpiSNP(EpireadReader):
 
     def __init__(self, fp):
         super().__init__(fp)
@@ -169,8 +168,7 @@ class CommentEpiSNP(EpiSNP):
         super().__init__(fp)
         self.row = CommentEpiSNPRow
 
-
-class Atlas_format(Epiread_format):
+class Atlas_format(AtlasReader):
     '''
     atlas has a structure of
     CHROM START END A_METH A_COV B_METH B_COV
@@ -205,7 +203,8 @@ class Atlas_format(Epiread_format):
                 pass
             else:
                 raise KeyError(cpg, "atlas start doesn't match cpg file")
-        return sp.csr_matrix(mat)
+        return sp.csr_matrix(mat) #TODO: problem: cannot hold fractions
+
 
 
 #%%
@@ -304,7 +303,6 @@ class SNPRow(EpiRow):
         except ValueError:
             raise("Record has no SNPs")
 
-
 class CommentEpiSNPRow(SNPRow):
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
                  snp_start="", snps="", origin=""):
@@ -312,7 +310,14 @@ class CommentEpiSNPRow(SNPRow):
                  snp_start, snps, origin)
         self.snps = re.sub(r"[\(\[].*?[\)\]]", "", snps).split(SNP_SEP)
 
-format_to_fileobj = {"old_epiread":Epiread_format, "old_epiread_A": CoordsEpiread, "clean_snps": EpiSNP,
-                    "snps_with_comments": CommentEpiSNP, "atlas":Atlas_format
-                     }
 
+def tabix_verify(fp):
+    assert os.path.isfile(fp)  # file exists
+    assert fp.endswith(".gz")  # gzipped file
+    assert os.path.isfile(fp + ".tbi")  # index file exists
+
+#TODO:
+# change parser signatures
+# implement json
+# parse atlas
+# test

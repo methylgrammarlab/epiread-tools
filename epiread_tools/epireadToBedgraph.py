@@ -5,56 +5,24 @@
 # Description: parse epiread files and save mean
 # methylation per position
 ###################################################
+import json
 
 import click
 import sys
 
 import numpy as np
-from  epiread_tools.epiparser import Parser
-from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes, bedgraph_to_intervals
+from  epiread_tools.epiparser import EpireadReader
 from epiread_tools.naming_conventions import *
 
 
 class EpiRunner():
 
-    def __init__(self, genomic_intervals, cpg_locations, epiread_files, outfile, epiformat, header=False, bedfile=True):
-        self.header = header
-        if bedfile:
-            self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
-        else:
-            self.genomic_intervals = [GenomicInterval(x) for x in genomic_intervals]
+    def __init__(self, config):
+        self.config = config
 
-        self.original_intervals = genomic_intervals
-        self.cpg_locations = cpg_locations
-        self.epiread_files = epiread_files
-        self.outfile = outfile
-        self.epiformat = epiformat
-        self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
-        self.matrices = []
-        self.interval_order = []
-        self.cpgs = []
-
-
-    def parse_one_chromosome(self, chrom, intervals):
-        '''
-        get data amd mapper
-        :return:
-        '''
-        intervals = sorted(intervals, key=lambda x: x.start)
-        self.interval_order.extend(intervals)
-        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epiformat)
-        methylation_matrix, mapper = parser.parse()
-        window_list = mapper.get_ind_intervals(intervals)
-        for start, end in window_list:
-            slice = methylation_matrix[:,start:end]
-            self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
-            self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
-
-
-    def parse_multiple_chromosomes(self):
-        for chrom, intervals in self.intervals_per_chrom.items():
-            self.parse_one_chromosome(chrom, intervals)
-
+    def read_mixture(self):
+        reader = EpireadReader(self.config)
+        self.interval_order, self.matrices, self.cpgs = reader.read()#TODO:fix
 
     def calc_coverage(self):
         '''
@@ -104,7 +72,7 @@ class EpiRunner():
             np.savetxt(outfile, np.vstack(out_arrs), delimiter=TAB, fmt='%s')
 
     def tobedgraph(self):
-        self.parse_multiple_chromosomes()
+        self.read_mixture()
         self.calc_coverage()
         self.calc_methylated()
         self.calc_mean_methylation()
@@ -113,33 +81,32 @@ class EpiRunner():
 #%%
 
 @click.command()
-@click.argument('cpg_coordinates')
-@click.argument('epireads')
-@click.argument('outfile')
+@click.argument('--cpg_coordinates', help='sorted cpg bed file')
+@click.argument('--epireads', help='comma delimited epiread paths')
+@click.argument('--outfile', help='output file path')
+@click.option('-j', '--json', help='run from json config file', default="sample_config.json") #TODO: implement
 @click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
 @click.option('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
               is_flag=True, default=False)
 @click.option('--header', is_flag=True, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 @click.version_option()
-def main(cpg_coordinates, epireads, outfile ,*args, **kwargs):
-    """ biscuit epiread to bedgraph converter"""
-    epiread_files = epireads.split(",")
+def main(**kwargs):
+    """ biscuit epiread to bedgraph converter. any command line options will override config"""
 
+    config = json.load(kwargs["json"])
+    config.update(kwargs)
+    if kwargs['epireads']:
+        config['epireads'] = kwargs['epireads'].split(",")
     if kwargs["intervals"]:
-        genomic_intervals = kwargs["intervals"].split(",")
-    elif kwargs["bedfile"]:
-        genomic_intervals = kwargs["bedfile"]
-    else:
-        raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
-    epiformat = "old_epiread"
+        config['genomic_intervals'] = kwargs["intervals"].split(",")
     if kwargs["coords"]:
-        epiformat = "old_epiread_A"
-    runner = EpiRunner(genomic_intervals, cpg_coordinates, epiread_files, outfile, epiformat,
-                       kwargs["header"], kwargs["bedfile"])
+        config['epiformat'] = "old_epiread_A"
+    if not config['genomic_intervals'] and not config['bedfile']:
+        raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
+    runner = EpiRunner(config)
     runner.tobedgraph()
 
 
 if __name__ == '__main__':
     main()
-#%%

@@ -1,0 +1,10 @@
+{
+  "genomic_intervals": ["chr1:100-200", "chr2:300-350", "chr2:400-650"],
+  "cpg_coordinates": "tests/data/sample_cpg_file.bed.gz",
+  "epiread_files": ["tests/data/fixed_withA.epiread.gz"],
+  "outfile": "test_output.bedgraph",
+  "epiformat": "old_epiread_A",
+  "header": false,
+  "bedfile": true,
+
+}
