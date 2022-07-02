@@ -15,14 +15,14 @@ from  epiread_tools.epiparser import EpireadReader
 from epiread_tools.naming_conventions import *
 
 
-class EpiRunner():
+class EpiToBedgraph():
 
     def __init__(self, config):
         self.config = config
 
     def read_mixture(self):
         reader = EpireadReader(self.config)
-        self.interval_order, self.matrices, self.cpgs = reader.read()#TODO:fix
+        self.interval_order, self.matrices, self.cpgs = reader.get_matrices_for_intervals()
 
     def calc_coverage(self):
         '''
@@ -84,7 +84,7 @@ class EpiRunner():
 @click.argument('--cpg_coordinates', help='sorted cpg bed file')
 @click.argument('--epireads', help='comma delimited epiread paths')
 @click.argument('--outfile', help='output file path')
-@click.option('-j', '--json', help='run from json config file', default="sample_config.json") #TODO: implement
+@click.option('-j', '--json', help='run from json config file')
 @click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
 @click.option('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
               is_flag=True, default=False)
@@ -93,8 +93,10 @@ class EpiRunner():
 @click.version_option()
 def main(**kwargs):
     """ biscuit epiread to bedgraph converter. any command line options will override config"""
-
-    config = json.load(kwargs["json"])
+    if kwargs["json"]:
+        config = json.load(kwargs["json"])
+    else:
+        config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
     if kwargs['epireads']:
         config['epireads'] = kwargs['epireads'].split(",")
@@ -104,9 +106,13 @@ def main(**kwargs):
         config['epiformat'] = "old_epiread_A"
     if not config['genomic_intervals'] and not config['bedfile']:
         raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
-    runner = EpiRunner(config)
+    runner = EpiToBedgraph(config)
     runner.tobedgraph()
 
 
 if __name__ == '__main__':
     main()
+
+# TODO:
+# how to test including main, config
+# how to format AtlasReader

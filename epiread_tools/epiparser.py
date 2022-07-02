@@ -14,8 +14,7 @@ from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromoso
 import scipy.sparse as sp
 import os
 import re
-# import sys
-# sys.path.insert(0, os.path.abspath('..'))
+
 #%%
 
 class EpireadReader:
@@ -24,14 +23,22 @@ class EpireadReader:
     each row is read even if it is empty e.g. NN-N
     '''
     def __init__(self, config):
-        pass
-
+        self.config = config
         if config['bedfile']:
-            self.genomic_intervals = bedgraph_to_intervals(genomic_intervals, self.header)
+            self.genomic_intervals = bedgraph_to_intervals(config['genomic_intervals'], config['header'])
         else:
-            self.genomic_intervals = [GenomicInterval(x) for x in genomic_intervals]
+            self.genomic_intervals = [GenomicInterval(x) for x in config['genomic_intervals']]
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
+        self.interval_order, self.matrices, self.cpgs = [],[],[]
+        self.row = EpiRow
 
+    def get_matrices_for_intervals(self):
+        self.parse_multiple_chromosomes()
+        return self.interval_order, self.matrices, self.cpgs
+
+    def parse_multiple_chromosomes(self):
+        for chrom, intervals in self.intervals_per_chrom.items():
+            self.parse_one_chromosome(chrom, intervals)
 
     def parse_one_chromosome(self, chrom, intervals):
         '''
@@ -40,42 +47,30 @@ class EpireadReader:
         '''
         intervals = sorted(intervals, key=lambda x: x.start)
         self.interval_order.extend(intervals)
-        parser = Parser(chrom, intervals, self.epiread_files, self.cpg_locations, self.epiformat)
-        methylation_matrix, mapper = parser.parse()
+        methylation_matrix, mapper = self.file_list_to_csr(chrom, intervals)
         window_list = mapper.get_ind_intervals(intervals)
         for start, end in window_list:
             slice = methylation_matrix[:,start:end]
             self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
             self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
 
-    @staticmethod
-    def parse_multiple_chromosomes(self):
-        for chrom, intervals in self.intervals_per_chrom.items():
-            self.parse_one_chromosome(chrom, intervals)
-
-    def init_mapper(self):
-        '''
-        map matrix coordinates
-        :return:
-        '''
-        self.mapper = Mapper(self.chrom, self.intervals, self.epiread_files, self.CpG_file)
-
-    def parse(self):
+    def file_list_to_csr(self, chrom, intervals):
         '''
         read files at designated intervals to matrix
         :return: scipy sparse matrix, mapper
         '''
+        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'])
         small_matrices = []
         sources = []
         i = 0
-        for epi_file in self.epiread_files:
-            small_matrix = self.fileobj(epi_file).to_csr(self.mapper)
+        for epi_file in self.config['epiread_files']:
+            small_matrix = self.to_csr(mapper)
             small_matrices.append(small_matrix)
-            sources.append((i, i + small_matrix.shape[0], self.mapper.sample_to_id[epi_file]))
+            sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
             i += small_matrix.shape[0]
-        self.mapper.init_index_to_source(sources)
+        mapper.init_index_to_source(sources)
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
-        return methylation_matrix, self.mapper
+        return methylation_matrix, mapper
 
     def cut(self, intervals):
         '''
@@ -110,12 +105,117 @@ class EpireadReader:
                         data.append(methylation_state[cpg])
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
+
+atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"]
+'''
+a note on strandedness:
+All positions must match the cpg file. To process 
+strand separately, make sure the CoG file includes separate coordinates
+e.g. chrN:200-201, chrN:201-202. This has to be the same file the epireads 
+are aligned to
+'''
 class AtlasReader:
     def __init__(self, config):
-        pass
+        self.config = config
+        self.atlas = self.config['atlas_file']
+        self.genomic_intervals = bedgraph_to_intervals(config['genomic_intervals'], config['header'])
+        self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
 
-    def parse(self, infile, output_format):
-        pass
+    def meth_cov_to_beta_matrices(self):
+        '''
+        input for celfie+, list of matrices
+        with beta values per region in regions
+        :return: lsit of matrices
+        '''
+        self.load_meth_cov_atlas()
+        interval_order, matrices = self.parse_multiple_chromosomes(self.beta)
+        return matrices
+
+    def meth_cov_to_sum(self):
+        '''
+        input for celfie, sum meth
+        and cov for each TIM
+        :return: sum meth per tim, sum cov per tim
+        '''
+        self.load_meth_cov_atlas()
+        meth_interval_order, meth = self.parse_multiple_chromosomes(self.meth)
+        cov_interval_order, cov = self.parse_multiple_chromosomes(self.cov)
+        assert (meth_interval_order == cov_interval_order)
+        sum_meth, sum_cov = [np.sum(x) for x in meth], [np.sum(x) for x in cov]
+        assert len(sum_meth)==len(sum_cov)
+        return sum_meth, sum_cov
+
+    def load_meth_cov_atlas(self):
+        '''
+        read file with 3 BED cols, and meth+cov per cell type
+        :return:
+        '''
+        df = pd.read_csv(self.atlas, sep="\t")
+        vals = df.iloc[:, 3:].values
+        self.meth = vals[:, ::2].T
+        self.cov =  vals[:, 1::2].T
+        self.beta = self.meth/self.cov
+        self.atlas_chrom = df["CHROM"].values
+        self.atlas_start = df["START"].values  # remove if 0 based
+
+    def align_vals(self, chrom, mapper, vals):
+        '''
+        make sure cpgs are in intervals
+        :param chrom: chromosome e.g. chr2
+        :param mapper: Mapper instance
+        :param vals: meth/cov/beta matrix
+        :return: aligned matrix
+        '''
+        mat = np.ones(shape=(self.beta.shape[0], mapper.max_cpgs))  # cell types by cpgs
+        mat.fill(np.nan)
+        chrom_filter = (self.atlas_chrom == chrom)
+        cpgs = self.atlas_start[chrom_filter]
+        for i, cpg in enumerate(cpgs):
+            if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
+                mat[:, mapper.abs_to_ind(cpg)] = vals[:, chrom_filter][:, i]
+            elif (cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] not in mapper.all_rel):
+                # not in intervals, skip
+                print("not in intervals", cpg)
+                pass
+            else:
+                raise KeyError(cpg, "atlas start doesn't match cpg file")
+        return mat
+
+    def parse_one_chromosome(self, intervals, chrom, vals):
+        '''
+        save vals per requested interval
+        :param intervals: GenomicInterval ,may overlap
+        :param chrom: chromosome e.g. chr2
+        :param vals: meth/cov/beta matrix
+        :return: list of matrix per interval
+        '''
+        matrices = []
+        interval_order = []
+        intervals = sorted(intervals, key=lambda x: x.start)
+        interval_order.extend([str(x) for x in intervals])
+        mapper = Mapper(chrom, intervals, [], self.config['cpg_coordinates'], False)  # init mapping
+        window_list = mapper.get_ind_intervals(intervals)
+        mat = self.align_vals(chrom, mapper, vals)
+        for start, end in window_list:
+            slice = mat[:, start:end]
+            matrices.append(slice)
+        return interval_order, matrices
+
+    def parse_multiple_chromosomes(self, val):
+        '''
+        iterate over all chromosomes in intervals
+        :param val:  meth/cov/beta matrix
+        :return: interval order, list of matrix per interval
+        '''
+        interval_order = []
+        matrices = []
+        for chrom, intervals in self.intervals_per_chrom.items():
+            sorted_intervals, mats = self.parse_one_chromosome(chrom, intervals, val)
+            interval_order.extend(sorted_intervals)
+            matrices.extend(mats)
+        return interval_order, matrices
+
+
 #%%
 #epiread objects
 
@@ -178,9 +278,9 @@ class Atlas_format(AtlasReader):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = None
-        self.init_beta()
+        self.load_meth_cov_atlas()
 
-    def init_beta(self):
+    def load_meth_cov_atlas(self):
         df = pd.read_csv(self.fp, sep="\t")
         vals = df.iloc[:, 3:].values
         beta = vals[:, ::2] / vals[:, 1::2]
@@ -316,8 +416,3 @@ def tabix_verify(fp):
     assert fp.endswith(".gz")  # gzipped file
     assert os.path.isfile(fp + ".tbi")  # index file exists
 
-#TODO:
-# change parser signatures
-# implement json
-# parse atlas
-# test
