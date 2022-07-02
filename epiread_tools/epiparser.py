@@ -64,7 +64,7 @@ class EpireadReader:
         sources = []
         i = 0
         for epi_file in self.config['epiread_files']:
-            small_matrix = self.to_csr(mapper)
+            small_matrix = self.to_csr(epi_file, mapper)
             small_matrices.append(small_matrix)
             sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
             i += small_matrix.shape[0]
@@ -72,27 +72,28 @@ class EpireadReader:
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
         return methylation_matrix, mapper
 
-    def cut(self, intervals):
+    @staticmethod
+    def cut(fp, intervals):
         '''
         Tabix out interval from file, return reads
         in original format
         :param intervals: list of GenomicInterval of chunk
         :return: iterator of relevant records
         '''
-        tabixfile = pysam.TabixFile(self.fp)
+        tabixfile = pysam.TabixFile(fp)
         for interval in intervals:
             try:
                 yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
             except ValueError:  # no coverage for this region in file
                 continue
 
-    def to_csr(self, mapper):
+    def to_csr(self, epi_file, mapper):
         row = []
         col = []
         data = []
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
-        epiread_iterator = self.cut(mapper.merged_intervals)
+        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             rel_start = mapper.abs_to_rel[record.get_start()]
@@ -225,11 +226,11 @@ class CoordsEpiread(EpireadReader):
         super().__init__(fp)
         self.row = CoordsRow
 
-    def to_csr(self, mapper):
+    def to_csr(self, epi_file, mapper):
         row = []
         col = []
         data = []
-        epiread_iterator = self.cut(mapper.merged_intervals)
+        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -246,8 +247,8 @@ class EpiSNP(EpireadReader):
         super().__init__(fp)
         self.row = SNPRow
 
-    def to_csr(self, mapper): #problem: aligning
-        epiread_iterator = self.cut(mapper.merged_intervals)
+    def to_csr(self,epi_file, mapper): #problem: aligning
+        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
         row = []
         col = []
         data = []
@@ -267,44 +268,6 @@ class CommentEpiSNP(EpiSNP):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = CommentEpiSNPRow
-
-class Atlas_format(AtlasReader):
-    '''
-    atlas has a structure of
-    CHROM START END A_METH A_COV B_METH B_COV
-    with a header line
-    '''
-
-    def __init__(self, fp):
-        super().__init__(fp)
-        self.row = None
-        self.load_meth_cov_atlas()
-
-    def load_meth_cov_atlas(self):
-        df = pd.read_csv(self.fp, sep="\t")
-        vals = df.iloc[:, 3:].values
-        beta = vals[:, ::2] / vals[:, 1::2]
-        self.beta = beta.T
-        self.atlas_chrom = df["CHROM"].values
-        self.atlas_start = df["START"].values  # remove if 0 based
-
-    def to_csr(self, mapper):
-
-        mat = np.ones(shape=(self.beta.shape[0], mapper.max_cpgs))  # cell types by cpgs
-        mat.fill(np.nan)
-        chrom_filter = (self.atlas_chrom == mapper.chrom)
-        cpgs = self.atlas_start[chrom_filter]
-        for i, cpg in enumerate(cpgs):
-            if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
-                mat[:, mapper.abs_to_ind(cpg)] = self.beta[:, chrom_filter][:, i]
-            elif (cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] not in mapper.all_rel):
-                # not in intervals, skip
-                print("not in intervals", cpg)
-                pass
-            else:
-                raise KeyError(cpg, "atlas start doesn't match cpg file")
-        return sp.csr_matrix(mat) #TODO: problem: cannot hold fractions
-
 
 
 #%%

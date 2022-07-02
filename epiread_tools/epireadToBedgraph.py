@@ -11,17 +11,19 @@ import click
 import sys
 
 import numpy as np
-from  epiread_tools.epiparser import EpireadReader
+from  epiread_tools.epiparser import EpireadReader, CoordsEpiread
 from epiread_tools.naming_conventions import *
 
+epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread}
 
 class EpiToBedgraph():
 
     def __init__(self, config):
         self.config = config
+        self.reader = epiformat_to_reader[self.config["epiformat"]]
 
     def read_mixture(self):
-        reader = EpireadReader(self.config)
+        reader = self.reader(self.config)
         self.interval_order, self.matrices, self.cpgs = reader.get_matrices_for_intervals()
 
     def calc_coverage(self):
@@ -81,9 +83,9 @@ class EpiToBedgraph():
 #%%
 
 @click.command()
-@click.argument('--cpg_coordinates', help='sorted cpg bed file')
-@click.argument('--epireads', help='comma delimited epiread paths')
-@click.argument('--outfile', help='output file path')
+@click.option('--cpg_coordinates', help='sorted cpg bed file')
+@click.option('--epireads', help='comma delimited epiread paths')
+@click.option('--outfile', help='output file path')
 @click.option('-j', '--json', help='run from json config file')
 @click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
 @click.option('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
