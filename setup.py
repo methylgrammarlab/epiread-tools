@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='epiread_tools',
-    version='0.0.2',
+    version='0.0.3',
     author='Irene Unterman',
     author_email='irene.guberman@mail.huji.ac.il',
     description='Tools for handling epiread files',
