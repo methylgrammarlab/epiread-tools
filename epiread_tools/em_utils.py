@@ -53,16 +53,29 @@ class GenomicInterval:
         '''
         return self.end - self.start
 
-    def shift(self, n):
+    def shift(self, n, inplace=False):
         '''
         shifts intervals by n bases, in place
         this does not take into account chromosome edges
         :param n: bases to move, neg in upstream
         :return:
         '''
-        self.start += n
-        self.end += n
-        return self
+        if inplace:
+            self.start += n
+            self.end += n
+            return self
+        else:
+            return GenomicInterval().set_from_positions(self.chrom, self.start+n, self.end+n)
+
+    def slop(self, n, inplace=False):
+        start = max(self.start-n,0) #no neg coordinates
+        end = self.end + n #might be bigger than chrom size, does it matter?
+        if inplace:
+            self.start = start
+            self.end = end
+            return self
+        else:
+            return GenomicInterval().set_from_positions(self.chrom, start, end)
 
     def __repr__(self):
         '''
@@ -74,13 +87,26 @@ class GenomicInterval:
     def __len__(self):
         return self.get_genomic_size()
 
+def cut(fp, intervals):
+    '''
+    Tabix out interval from file, return reads
+    in original format
+    :param intervals: list of GenomicInterval of chunk
+    :return: iterator of relevant records
+    '''
+    tabixfile = pysam.TabixFile(fp)
+    for interval in intervals:
+        try:
+            yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
+        except ValueError:  # no coverage for this region in file
+            continue
 
 class Mapper:
     '''
     keeps mapping from genomic to relative and vice versa
     '''
 
-    def __init__(self,chrom, intervals, epiread_files, CpG_file, min_dist=0):
+    def __init__(self,chrom, intervals, epiread_files, CpG_file, min_dist=0, slop=500):
         '''
 
         :param chrom: chromosome
@@ -90,11 +116,13 @@ class Mapper:
         :param min_dist: minimun distance between intervals
         '''
         self.chrom = chrom
-        self.intervals = intervals
+        self.original_intervals = intervals
         self.epiread_files = epiread_files
         self.CpG_file = CpG_file
         self.min_dist = min_dist
+        self.slop = slop
 
+        self.slopped_intervals = [x.slop(slop) for x in self.original_intervals]
         self.merged_intervals = self.merge_intervals()
         self.init_sample_ids()
         self.load_CpGs()
@@ -158,16 +186,15 @@ class Mapper:
         '''
         return sorted(list(self.sample_to_id.values()))
 
-    def load_CpGs(self):
+    def load_CpGs(self, slop=500):
         '''
-        :param one_based: epireads are 0 based, so take 1
-        off each cpg start point
+        we want to load not only cpgs in intervals, but slop
+        +- read length
         :return: mapping back and forth for absolute and
         relative coordinates
         '''
         CpGs = []
-        tabixfile = pysam.TabixFile(self.CpG_file)
-        for record in tabixfile.fetch(self.chrom, None, None): #load entire chromosome
+        for record in cut(self.CpG_file, self.merged_intervals):
             CpGs.append(int(record.split(TAB)[1]))  # start position in bed format
         CpGs = np.array(CpGs)
         rel_to_abs = dict(enumerate(CpGs))
@@ -219,7 +246,7 @@ class Mapper:
         :return: merged intervals
         '''
         #easier to load less chunks
-        win_list = [(interval.start, interval.end) for interval in self.intervals]
+        win_list = [(interval.start, interval.end) for interval in self.slopped_intervals]
         merged_list = merge_win_list(win_list, self.min_dist)
         new_intervals = [GenomicInterval().set_from_positions(self.chrom, x, y) for x, y in merged_list]
         return new_intervals
@@ -271,6 +298,7 @@ def bedgraph_to_intervals(fp, header=False):
     intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.to_records(index=False)]
     return intervals
 
+
 def find_intersection(intervals, range_start, range_end):
     '''
     find intersection between intervals and range
@@ -291,6 +319,41 @@ def find_intersection(intervals, range_start, range_end):
         intersection.append((max(range_start, interval_start), min(range_end, interval_end)))
     return intersection
 
+def calc_coverage(matrices):
+    '''
+    calculate coverage per CpG
+    :return:np array of coverage sums
+    '''
+    coverage = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))+ \
+                    np.squeeze(np.asarray((methylation_matrix == UNMETHYLATED).sum(axis=0)))
+                     for methylation_matrix in matrices]
+    return coverage
+
+def calc_methylated(matrices):
+    '''
+    calc sum methylated per item in list
+    :param matrices: list of np arrays
+    :return: np array of methylation sums
+    '''
+    methylation = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))
+                        for methylation_matrix in matrices]
+    return methylation
+
+def in_intervals(cpg, intervals):
+    '''
+    check if cpg in intervals. assumes cpg and
+    all intervals are on the same chromosome
+    :param cpg: start position, e.g. 21244961
+    :param intervals: list of Genomic intervals
+    :return: cpg in intervals
+    '''
+    sorted_intervals = sorted(intervals, key=lambda x: x.start)
+    if cpg < sorted_intervals[0].start:
+        return False
+    for interval in sorted_intervals:
+        if cpg > interval.start and cpg < interval.end:
+            return True
+    return False
 
 def jsonconverter(obj):
     if isinstance(obj, np.integer):

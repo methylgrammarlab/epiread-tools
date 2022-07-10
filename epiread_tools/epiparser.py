@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import pysam
 from  epiread_tools.naming_conventions import *
-from  epiread_tools.em_utils import Mapper, find_intersection, bedgraph_to_intervals
-from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes
+from  epiread_tools.em_utils import Mapper, find_intersection, bedgraph_to_intervals, cut
+from  epiread_tools.em_utils import GenomicInterval, split_intervals_to_chromosomes, in_intervals
 import scipy.sparse as sp
 import os
 import re
@@ -72,28 +72,13 @@ class EpireadReader:
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
         return methylation_matrix, mapper
 
-    @staticmethod
-    def cut(fp, intervals):
-        '''
-        Tabix out interval from file, return reads
-        in original format
-        :param intervals: list of GenomicInterval of chunk
-        :return: iterator of relevant records
-        '''
-        tabixfile = pysam.TabixFile(fp)
-        for interval in intervals:
-            try:
-                yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
-            except ValueError:  # no coverage for this region in file
-                continue
-
     def to_csr(self, epi_file, mapper):
         row = []
         col = []
         data = []
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
-        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
+        epiread_iterator = cut(epi_file, mapper.merged_intervals)
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             rel_start = mapper.abs_to_rel[record.get_start()]
@@ -107,7 +92,7 @@ class EpireadReader:
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
 
-atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"]
+atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"] #TODO: delete or move
 '''
 a note on strandedness:
 All positions must match the cpg file. To process 
@@ -142,8 +127,7 @@ class AtlasReader:
         meth_interval_order, meth = self.parse_multiple_chromosomes(self.meth)
         cov_interval_order, cov = self.parse_multiple_chromosomes(self.cov)
         assert (meth_interval_order == cov_interval_order)
-        sum_meth, sum_cov = [np.sum(x) for x in meth], [np.sum(x) for x in cov]
-        assert len(sum_meth)==len(sum_cov)
+        sum_meth, sum_cov = np.array([np.nansum(x, axis=1) for x in meth]), np.array([np.nansum(x, axis=1) for x in cov])
         return sum_meth, sum_cov
 
     def load_meth_cov_atlas(self):
@@ -174,15 +158,14 @@ class AtlasReader:
         for i, cpg in enumerate(cpgs):
             if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
                 mat[:, mapper.abs_to_ind(cpg)] = vals[:, chrom_filter][:, i]
-            elif (cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] not in mapper.all_rel):
-                # not in intervals, skip
+            elif not in_intervals(cpg, mapper.merged_intervals):
                 print("not in intervals", cpg)
                 pass
             else:
                 raise KeyError(cpg, "atlas start doesn't match cpg file")
         return mat
 
-    def parse_one_chromosome(self, intervals, chrom, vals):
+    def parse_one_chromosome(self, chrom, intervals, vals):
         '''
         save vals per requested interval
         :param intervals: GenomicInterval ,may overlap
@@ -230,7 +213,7 @@ class CoordsEpiread(EpireadReader):
         row = []
         col = []
         data = []
-        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
+        epiread_iterator = cut(epi_file, mapper.merged_intervals)
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -248,7 +231,7 @@ class EpiSNP(EpireadReader):
         self.row = SNPRow
 
     def to_csr(self,epi_file, mapper): #problem: aligning
-        epiread_iterator = self.cut(epi_file, mapper.merged_intervals)
+        epiread_iterator = cut(epi_file, mapper.merged_intervals)
         row = []
         col = []
         data = []
@@ -379,3 +362,20 @@ def tabix_verify(fp):
     assert fp.endswith(".gz")  # gzipped file
     assert os.path.isfile(fp + ".tbi")  # index file exists
 
+epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread}
+
+#%%
+# config = {"epiread_files": ["/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_6_rep9_mixture.epiread.gz"],
+#           "atlas_file": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_atlas_over_tims.txt",
+#           "genomic_intervals": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_processed_tims.txt",
+#           "cpg_coordinates":  "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz",
+#            "outfile":"sample_output.something",
+#             "epiformat" : "old_epiread",
+#           "bedfile":True,
+#           "header":True,
+#           "max_iterations":1000,
+#           "random_restarts":1,
+#           "stop_criterion":0.001
+#           }
+# em_model = AtlasReader(config)
+# em_model.meth_cov_to_beta_matrices()

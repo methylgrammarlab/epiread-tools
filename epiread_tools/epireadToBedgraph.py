@@ -11,10 +11,10 @@ import click
 import sys
 
 import numpy as np
-from  epiread_tools.epiparser import EpireadReader, CoordsEpiread
-from epiread_tools.naming_conventions import *
+from  epiread_tools.epiparser import EpireadReader, CoordsEpiread, epiformat_to_reader
+from epiread_tools.naming_conventions import
+from epiread_tools.em_utils import calc_coverage, calc_methylated
 
-epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread}
 
 class EpiToBedgraph():
 
@@ -31,13 +31,10 @@ class EpiToBedgraph():
         calculate coverage per CpG
         :return:
         '''
-        self.coverage = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))+ \
-                        np.squeeze(np.asarray((methylation_matrix == UNMETHYLATED).sum(axis=0)))
-                         for methylation_matrix in self.matrices]
+        self.coverage = calc_coverage(self.matrices)
 
     def calc_methylated(self):
-        self.methylation = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))
-                            for methylation_matrix in self.matrices]
+        self.methylation = calc_methylated(self.matrices)
 
     def calc_mean_methylation(self):
         '''
@@ -115,6 +112,3 @@ def main(**kwargs):
 if __name__ == '__main__':
     main()
 
-# TODO:
-# how to test including main, config
-# how to format AtlasReader
