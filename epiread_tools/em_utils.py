@@ -186,7 +186,7 @@ class Mapper:
         '''
         return sorted(list(self.sample_to_id.values()))
 
-    def load_CpGs(self, slop=500):
+    def load_CpGs(self, slop=800):
         '''
         we want to load not only cpgs in intervals, but slop
         +- read length
