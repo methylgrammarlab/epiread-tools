@@ -106,7 +106,7 @@ class Mapper:
     keeps mapping from genomic to relative and vice versa
     '''
 
-    def __init__(self,chrom, intervals, epiread_files, CpG_file, min_dist=0, slop=500):
+    def __init__(self,chrom, intervals, epiread_files, CpG_file, min_dist=0, slop=800):
         '''
 
         :param chrom: chromosome
@@ -186,7 +186,7 @@ class Mapper:
         '''
         return sorted(list(self.sample_to_id.values()))
 
-    def load_CpGs(self, slop=800):
+    def load_CpGs(self):
         '''
         we want to load not only cpgs in intervals, but slop
         +- read length
