@@ -79,7 +79,7 @@ class EpiToBedgraph():
 
 #%%
 
-@click.command()
+@click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 @click.option('--cpg_coordinates', help='sorted cpg bed file')
 @click.option('--epireads', help='comma delimited epiread paths')
 @click.option('--outfile', help='output file path')
@@ -90,13 +90,15 @@ class EpiToBedgraph():
 @click.option('--header', is_flag=True, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 @click.version_option()
-def main(**kwargs):
+@click.pass_context
+def main(ctx, **kwargs):
     """ biscuit epiread to bedgraph converter. any command line options will override config"""
     if kwargs["json"]:
         config = json.load(kwargs["json"])
     else:
         config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
+    config.update(dict([item.strip('--').split('=') for item in ctx.args]))
     if kwargs['epireads']:
         config['epireads'] = kwargs['epireads'].split(",")
     if kwargs["intervals"]:
