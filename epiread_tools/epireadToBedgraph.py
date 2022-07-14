@@ -105,8 +105,6 @@ def main(ctx, **kwargs):
         config['genomic_intervals'] = kwargs["intervals"].split(",")
     if config["coords"]:
         config['epiformat'] = "old_epiread_A"
-    if "genomic_intervals" not in config and not config["bedfile"]:
-        raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
     runner = EpiToBedgraph(config)
     runner.tobedgraph()
 
