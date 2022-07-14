@@ -327,6 +327,7 @@ def calc_coverage(matrices):
     coverage = [np.squeeze(np.asarray((methylation_matrix == METHYLATED).sum(axis=0)))+ \
                     np.squeeze(np.asarray((methylation_matrix == UNMETHYLATED).sum(axis=0)))
                      for methylation_matrix in matrices]
+    coverage = [x if type(x)==np.ndarray else np.array([x]) for x in coverage]
     return coverage
 
 def calc_methylated(matrices):

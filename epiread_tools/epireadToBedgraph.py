@@ -113,4 +113,11 @@ if __name__ == '__main__':
     main()
 
 #%%
-
+#
+# config = {"bedfile":True, "header": False, "cpg_coordinates": "/Users/ireneu/PycharmProjects/old_in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz",
+#           "epiread_files": ["/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/test_6_rep5_mixture.epiread.gz"],
+#           "genomic_intervals": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/test_tims.txt", "epiformat":"old_epiread",
+#           "outfile":"abnana"}
+# runner = EpiToBedgraph(config)
+# runner.tobedgraph()
+#
