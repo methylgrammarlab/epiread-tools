@@ -99,9 +99,9 @@ def main(ctx, **kwargs):
         config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
-    if 'epiread_files' in config:
+    if config["epireaf_files"]:
         config['epiread_files'] = config['epiread_files'].split(",")
-    if "intervals" in config:
+    if config["intervals"]:
         config['genomic_intervals'] = config["intervals"].split(",")
     if config["coords"]: #flag
         config['epiformat'] = "old_epiread_A"
