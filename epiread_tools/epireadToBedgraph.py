@@ -99,7 +99,7 @@ def main(ctx, **kwargs):
         config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
-    if config["epireaf_files"]:
+    if config["epiread_files"]:
         config['epiread_files'] = config['epiread_files'].split(",")
     if config["intervals"]:
         config['genomic_intervals'] = config["intervals"].split(",")
