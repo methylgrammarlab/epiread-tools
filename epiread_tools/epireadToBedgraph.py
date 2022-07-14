@@ -81,7 +81,7 @@ class EpiToBedgraph():
 
 @click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 @click.option('--cpg_coordinates', help='sorted cpg bed file')
-@click.option('--epireads', help='comma delimited epiread paths')
+@click.option('--epiread_files', help='comma delimited epiread paths')
 @click.option('--outfile', help='output file path')
 @click.option('-j', '--json', help='run from json config file')
 @click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
@@ -99,11 +99,11 @@ def main(ctx, **kwargs):
         config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
-    if config['epireads']:
-        config['epireads'] = kwargs['epireads'].split(",")
-    if config["intervals"]:
-        config['genomic_intervals'] = kwargs["intervals"].split(",")
-    if config["coords"]:
+    if 'epiread_files' in config:
+        config['epiread_files'] = config['epiread_files'].split(",")
+    if "intervals" in config:
+        config['genomic_intervals'] = config["intervals"].split(",")
+    if config["coords"]: #flag
         config['epiformat'] = "old_epiread_A"
     runner = EpiToBedgraph(config)
     runner.tobedgraph()
