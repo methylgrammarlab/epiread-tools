@@ -67,7 +67,7 @@ class EpiToBedgraph():
             if arr.any():
                 out_arrs.append(arr)
 
-        with open(self.outfile, "w") as outfile:
+        with open(self.config["outfile"], "w") as outfile:
             np.savetxt(outfile, np.vstack(out_arrs), delimiter=TAB, fmt='%s')
 
     def tobedgraph(self):
