@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 from  epiread_tools.epiparser import EpireadReader, CoordsEpiread, epiformat_to_reader
-from epiread_tools.naming_conventions import
+from epiread_tools.naming_conventions import *
 from epiread_tools.em_utils import calc_coverage, calc_methylated
 
 
