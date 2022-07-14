@@ -99,11 +99,11 @@ def main(ctx, **kwargs):
         config= {"epiformat":"old_epiread", "bedfile":False}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
-    if kwargs['epireads']:
+    if config['epireads']:
         config['epireads'] = kwargs['epireads'].split(",")
-    if kwargs["intervals"]:
+    if config["intervals"]:
         config['genomic_intervals'] = kwargs["intervals"].split(",")
-    if kwargs["coords"]:
+    if config["coords"]:
         config['epiformat'] = "old_epiread_A"
     if not config['genomic_intervals'] and not config['bedfile']:
         raise ValueError("either specify intervals or add bed file. For whole genome use -b with chrom sizes")
@@ -113,4 +113,6 @@ def main(ctx, **kwargs):
 
 if __name__ == '__main__':
     main()
+
+#%%
 
