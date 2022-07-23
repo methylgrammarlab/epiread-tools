@@ -130,6 +130,18 @@ class AtlasReader:
         sum_meth, sum_cov = np.array([np.nansum(x, axis=1) for x in meth]), np.array([np.nansum(x, axis=1) for x in cov])
         return sum_meth, sum_cov
 
+    def meth_cov_to_meth_cov(self):
+        '''
+        input for celfie-plus, sum meth
+        and cov for each cpg
+        :return: sum meth per cpg, sum cov per cpg
+        '''
+        self.load_meth_cov_atlas()
+        meth_interval_order, meth = self.parse_multiple_chromosomes(self.meth)
+        cov_interval_order, cov = self.parse_multiple_chromosomes(self.cov)
+        assert (meth_interval_order == cov_interval_order)
+        return meth, cov
+
     def load_meth_cov_atlas(self):
         '''
         read file with 3 BED cols, and meth+cov per cell type

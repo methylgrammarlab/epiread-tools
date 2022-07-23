@@ -28,7 +28,7 @@ epireadToBedgraph -j <config.json>
 any parameter in the config file can be overwriten via the command line, e.g.:
 
 ```
-epireadToBedgraph -j <config.json> --outfile <output_file> -i chr3:50-150,ch10:440-450
+epireadToBedgraph -j <config.json> --outfile=<output_file> -i chr3:50-150,ch10:440-450
 ```
 
 To parse epiread with cpg coordinates use flag -A
