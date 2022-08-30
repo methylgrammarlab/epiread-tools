@@ -29,7 +29,7 @@ class EpireadReader:
         else:
             self.genomic_intervals = [GenomicInterval(x) for x in config['genomic_intervals']]
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
-        self.interval_order, self.matrices, self.cpgs = [],[],[]
+        self.interval_order, self.matrices, self.cpgs, self.sources = [],[],[],[]
         self.row = EpiRow
 
     def get_matrices_for_intervals(self):
@@ -53,6 +53,8 @@ class EpireadReader:
             slice = methylation_matrix[:,start:end]
             self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
             self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
+            self.sources.append(np.array([mapper.index_to_source(i)
+                                          for i in np.arange(slice.shape[0])[slice.getnnz(1)>0]]))
 
     def file_list_to_csr(self, chrom, intervals):
         '''
