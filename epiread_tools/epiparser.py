@@ -40,6 +40,9 @@ class EpireadReader:
         for chrom, intervals in self.intervals_per_chrom.items():
             self.parse_one_chromosome(chrom, intervals)
 
+    def get_sources(self):
+        return self.sources
+
     def parse_one_chromosome(self, chrom, intervals):
         '''
         get data amd mapper
