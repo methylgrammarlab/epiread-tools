@@ -123,7 +123,7 @@ class Mapper:
         self.slop = slop
 
         self.slopped_intervals = [x.slop(slop) for x in self.original_intervals]
-        self.merged_intervals = self.merge_intervals()
+        self.merged_intervals = self.merge_intervals(self.slopped_intervals)
         self.init_sample_ids()
         self.load_CpGs()
         self.load_snps()
@@ -240,13 +240,13 @@ class Mapper:
             ind_intervals.append((self.rel_to_ind(rel_start), self.rel_to_ind(rel_end -1) + 1))
         return ind_intervals
 
-    def merge_intervals(self):
+    def merge_intervals(self, intervals):
         '''
         merge intervals if they are less than min dist apart
         :return: merged intervals
         '''
         #easier to load less chunks
-        win_list = [(interval.start, interval.end) for interval in self.slopped_intervals]
+        win_list = [(interval.start, interval.end) for interval in intervals]
         merged_list = merge_win_list(win_list, self.min_dist)
         new_intervals = [GenomicInterval().set_from_positions(self.chrom, x, y) for x, y in merged_list]
         return new_intervals
