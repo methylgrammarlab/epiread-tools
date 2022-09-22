@@ -64,7 +64,7 @@ class EpireadReader:
         read files at designated intervals to matrix
         :return: scipy sparse matrix, mapper
         '''
-        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=20000)
+        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=2000)
         small_matrices = []
         sources = []
         i = 0
@@ -235,6 +235,8 @@ class CoordsEpiread(EpireadReader):
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             for abs, cpg in record.get_coord_methylation():
+                if abs not in mapper.abs_to_rel:
+                    raise KeyError("file %s chrom %s position %d" % (epi_file, mapper.chrom, abs))
                 if mapper.abs_to_rel[abs] in mapper.all_rel:
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
