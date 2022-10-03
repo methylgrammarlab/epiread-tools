@@ -234,9 +234,9 @@ class CoordsEpiread(EpireadReader):
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
-            for abs, cpg in record.get_coord_methylation():
-                if abs not in mapper.abs_to_rel:
-                    raise KeyError("file %s, %s position %d, record %s" % (epi_file, mapper.chrom, abs, str(record)))
+            if record.coords is None: #snp row
+                pass
+            for abs, cpg in record.get_coord_methylation(): ###
                 if mapper.abs_to_rel[abs] in mapper.all_rel:
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
@@ -321,12 +321,15 @@ class EpiRow:
 class CoordsRow(EpiRow):
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
                  snp_start="", snps="", origin=""):
-        self.coords = [int(x) for x in coords.split(COORD_SEP)]
-        self.read_start = self.coords[0]
-        super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
-                 snp_start, snps, origin)
-        assert (len(self.coords) == len(self.methylation),
-                "unequal length of coordinates and methylation, did you mean old_epiread?")
+        if coords==NO_DATA: #snp row
+            self.coords = None
+        else:
+            self.coords = [int(x) for x in coords.split(COORD_SEP)]
+            self.read_start = self.coords[0]
+            super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
+                     snp_start, snps, origin)
+            assert (len(self.coords) == len(self.methylation),
+                    "unequal length of coordinates and methylation, did you mean old_epiread?")
 
     def get_coord_methylation(self):
         '''
