@@ -320,8 +320,8 @@ class CoordsRow(EpiRow):
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, coords, methylation,
                  snp_start="", snps="", origin=""):
         if coords==NO_DATA: #snp row
-            self.coords = None
-            self.methylation = None
+            self.coords = []
+            self.methylation = []
         else:
             self.coords = [int(x) for x in coords.split(COORD_SEP)]
             self.read_start = self.coords[0]
