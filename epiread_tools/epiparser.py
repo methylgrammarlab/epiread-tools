@@ -64,7 +64,7 @@ class EpireadReader:
         read files at designated intervals to matrix
         :return: scipy sparse matrix, mapper
         '''
-        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'])
+        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=1500)
         small_matrices = []
         sources = []
         i = 0
