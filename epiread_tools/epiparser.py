@@ -234,8 +234,6 @@ class CoordsEpiread(EpireadReader):
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
-            if record.coords is None: #snp row
-                pass
             for abs, cpg in record.get_coord_methylation(): ###
                 if mapper.abs_to_rel[abs] in mapper.all_rel:
                     row.append(i)
@@ -323,6 +321,7 @@ class CoordsRow(EpiRow):
                  snp_start="", snps="", origin=""):
         if coords==NO_DATA: #snp row
             self.coords = None
+            self.methylation = None
         else:
             self.coords = [int(x) for x in coords.split(COORD_SEP)]
             self.read_start = self.coords[0]
