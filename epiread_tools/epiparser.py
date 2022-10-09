@@ -216,7 +216,26 @@ class AtlasReader:
             matrices.extend(mats)
         return interval_order, matrices
 
+class EpiAtlasReader:
+    '''
+    read lambdas and thetas files created with bimodal_detector
+    assumes each row represents a region
+    '''
+    def __init__(self, config):
+        self.config = config
 
+    def read_lambdas(self):
+        with open(self.config["lambdas"], "r") as infile: #TODO: test
+            df = pd.read_csv(infile, sep="\t")
+        res = df.iloc[:,3:].values.tolist() #remove chrom start end
+        return res
+
+    def read_thetas(self):
+        with open(self.config["thetas"], "r") as infile:
+            df = pd.read_csv(infile, sep="\t", header=None, names=["chrom", "start", "end", "thetaA", "thetaB"])
+        thetaA = [np.array(eval(x)) for x in df["thetaA"].values.tolist()] #TODO: fix
+        thetaB = [np.array(eval(x)) for x in df["thetaB"].values.tolist()]
+        return thetaA, thetaB
 #%%
 #epiread objects
 
