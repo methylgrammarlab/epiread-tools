@@ -225,15 +225,16 @@ class EpiAtlasReader:
         self.config = config
 
     def read_lambdas(self):
-        with open(self.config["lambdas"], "r") as infile: #TODO: test
-            df = pd.read_csv(infile, sep="\t")
+        with open(self.config["lambdas"], "r") as infile:
+            df = pd.read_csv(infile, sep="\t", header=None, skiprows=1)
         res = df.iloc[:,3:].values.tolist() #remove chrom start end
+        res = [np.array(x) for x in res]
         return res
 
     def read_thetas(self):
         with open(self.config["thetas"], "r") as infile:
             df = pd.read_csv(infile, sep="\t", header=None, names=["chrom", "start", "end", "thetaA", "thetaB"])
-        thetaA = [np.array(eval(x)) for x in df["thetaA"].values.tolist()] #TODO: fix
+        thetaA = [np.array(eval(x)) for x in df["thetaA"].values.tolist()]
         thetaB = [np.array(eval(x)) for x in df["thetaB"].values.tolist()]
         return thetaA, thetaB
 #%%
