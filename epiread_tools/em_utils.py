@@ -43,7 +43,7 @@ class GenomicInterval:
         :param end: int
         :return: the GenomicInterval object
         '''
-        self.chrom, self.start, self.end = chrom, start, end
+        self.chrom, self.start, self.end = chrom, int(start), int(end)
         return self
 
     def get_genomic_size(self):

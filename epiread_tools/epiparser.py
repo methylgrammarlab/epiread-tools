@@ -227,16 +227,18 @@ class EpiAtlasReader:
     def read_lambdas(self):
         with open(self.config["lambdas"], "r") as infile:
             df = pd.read_csv(infile, sep="\t", header=None, skiprows=1)
-        res = df.iloc[:,3:].values.tolist() #remove chrom start end
+        self.lambda_intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.iloc[:,:3].values]
+        res = df.iloc[:,6:].values.tolist() #remove chrom start end
         res = [np.array(x) for x in res]
-        return res
+        return self.lambda_intervals, res
 
     def read_thetas(self):
         with open(self.config["thetas"], "r") as infile:
-            df = pd.read_csv(infile, sep="\t", header=None, names=["chrom", "start", "end", "thetaA", "thetaB"])
+            df = pd.read_csv(infile, sep="\t", header=None, names=["input_chrom", "input_start", "input_end","chrom", "start", "end", "thetaA", "thetaB"])
+        self.theta_intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.iloc[:,:3].values]
         thetaA = [np.array(eval(x)) for x in df["thetaA"].values.tolist()]
         thetaB = [np.array(eval(x)) for x in df["thetaB"].values.tolist()]
-        return thetaA, thetaB
+        return self.theta_intervals, thetaA, thetaB
 #%%
 #epiread objects
 
