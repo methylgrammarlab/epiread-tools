@@ -69,6 +69,13 @@ class GenomicInterval:
         self.chrom, self.start, self.end = chrom, int(start), int(end)
         return self
 
+    def __eq__(self, other):
+        if not isinstance(other, GenomicInterval):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+
+        return self.chrom == other.chrom and self.start == other.start and self.end == other.end
+
     def get_genomic_size(self):
         '''
         find genomic length of interval

@@ -143,7 +143,7 @@ class AtlasReader:
         '''
         self.load_meth_cov_atlas()
         interval_order, matrices = self.parse_multiple_chromosomes(self.beta)
-        return matrices
+        return interval_order, matrices
 
     def meth_cov_to_sum(self):
         '''
@@ -156,7 +156,7 @@ class AtlasReader:
         cov_interval_order, cov = self.parse_multiple_chromosomes(self.cov)
         assert (meth_interval_order == cov_interval_order)
         sum_meth, sum_cov = np.array([np.nansum(x, axis=1) for x in meth]), np.array([np.nansum(x, axis=1) for x in cov])
-        return sum_meth, sum_cov
+        return cov_interval_order, sum_meth, sum_cov
 
     def meth_cov_to_meth_cov(self):
         '''
@@ -168,7 +168,7 @@ class AtlasReader:
         meth_interval_order, meth = self.parse_multiple_chromosomes(self.meth)
         cov_interval_order, cov = self.parse_multiple_chromosomes(self.cov)
         assert (meth_interval_order == cov_interval_order)
-        return meth, cov
+        return cov_interval_order, meth, cov
 
     def load_meth_cov_atlas(self):
         '''
