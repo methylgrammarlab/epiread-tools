@@ -223,14 +223,14 @@ class AtlasReader:
         matrices = []
         interval_order = []
         intervals = sorted(intervals, key=lambda x: x.start)
-        interval_order.extend([str(x) for x in intervals])
+        # interval_order.extend([str(x) for x in intervals])
         mapper = Mapper(chrom, intervals, [], self.config['cpg_coordinates'], False)  # init mapping
         window_list = mapper.get_ind_intervals(intervals)
         mat = self.align_vals(chrom, mapper, vals)
         for start, end in window_list:
             slice = mat[:, start:end]
             matrices.append(slice)
-        return interval_order, matrices
+        return intervals, matrices
 
     def parse_multiple_chromosomes(self, val):
         '''
