@@ -52,12 +52,12 @@ class EpireadReader:
         else:
             self.genomic_intervals = [GenomicInterval(x) for x in config['genomic_intervals']]
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
-        self.interval_order, self.matrices, self.cpgs, self.sources = [],[],[],[]
+        self.interval_order, self.matrices, self.cpgs, self.sources, self.origins = [],[],[],[],[]
         self.row = EpiRow
 
     def get_matrices_for_intervals(self):
         self.parse_multiple_chromosomes()
-        return self.interval_order, self.matrices, self.cpgs
+        return self.interval_order, self.matrices, self.cpgs, self.origins
 
     def parse_multiple_chromosomes(self):
         for chrom, intervals in self.intervals_per_chrom.items():
@@ -73,11 +73,13 @@ class EpireadReader:
         '''
         intervals = sorted(intervals, key=lambda x: x.start)
         self.interval_order.extend(intervals)
-        methylation_matrix, mapper = self.file_list_to_csr(chrom, intervals)
+        methylation_matrix, mapper, origins = self.file_list_to_csr(chrom, intervals)
         window_list = mapper.get_ind_intervals(intervals)
         for start, end in window_list:
             slice = methylation_matrix[:,start:end]
+            slice.eliminate_zeros()
             self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
+            self.origins.append(origins[slice.getnnz(1)>0])
             self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
             self.sources.append(np.array([mapper.index_to_source(i)
                                           for i in np.arange(slice.shape[0])[slice.getnnz(1)>0]]))
@@ -90,20 +92,23 @@ class EpireadReader:
         mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=1500)
         small_matrices = []
         sources = []
+        origins = []
         i = 0
         for epi_file in self.config['epiread_files']:
-            small_matrix = self.to_csr(epi_file, mapper)
+            small_matrix, origin = self.to_csr(epi_file, mapper)
             small_matrices.append(small_matrix)
+            origins.append(origin)
             sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
             i += small_matrix.shape[0]
         mapper.init_index_to_source(sources)
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
-        return methylation_matrix, mapper
+        return methylation_matrix, mapper, np.hstack(origins)
 
     def to_csr(self, epi_file, mapper):
         row = []
         col = []
         data = []
+        origin = []
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
         epiread_iterator = cut(epi_file, mapper.merged_intervals)
@@ -114,10 +119,12 @@ class EpireadReader:
             for intersect_start, intersect_end in find_intersection(rel_intervals, rel_start, rel_end):
                 if intersect_end - intersect_start:  # overlap length is > 0
                     row.extend([i] * (intersect_end - intersect_start))
+                    origin.append(record.origin)
                     col.extend(list(range(mapper.rel_to_ind(intersect_start), mapper.rel_to_ind(intersect_end - 1) + 1)))
                     for cpg in record.methylation[intersect_start - rel_start:intersect_end - rel_start]:
                         data.append(methylation_state[cpg])
-        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
+        mat = sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
+        return mat, origin
 
 
 atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"] #TODO: delete or move
@@ -275,16 +282,18 @@ class CoordsEpiread(EpireadReader):
         row = []
         col = []
         data = []
+        origin = []
         epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals)) #should be merged, unslopped
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
+            origin.append(record.origin)
             for abs, cpg in record.get_coord_methylation(): ###
                 if mapper.abs_to_rel[abs] in mapper.all_rel:
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
                     data.append(methylation_state[cpg])
-        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int), origin
 
 class EpiSNP(EpireadReader):
 
