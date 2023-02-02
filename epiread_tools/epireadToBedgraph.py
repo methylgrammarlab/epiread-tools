@@ -47,7 +47,7 @@ class EpiToBedgraph():
 
     def read_mixture(self):
         reader = self.reader(self.config)
-        self.interval_order, self.matrices, self.cpgs = reader.get_matrices_for_intervals()
+        self.interval_order, self.matrices, self.cpgs, self.origins = reader.get_matrices_for_intervals()
 
     def calc_coverage(self):
         '''
