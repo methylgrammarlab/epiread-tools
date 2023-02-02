@@ -78,11 +78,18 @@ class EpireadReader:
         for start, end in window_list:
             slice = methylation_matrix[:,start:end]
             slice.eliminate_zeros()
-            self.matrices.append(slice[slice.getnnz(1)>0]) #remove empty rows
-            self.origins.append(origins[slice.getnnz(1)>0])
-            self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
-            self.sources.append(np.array([mapper.index_to_source(i)
-                                          for i in np.arange(slice.shape[0])[slice.getnnz(1)>0]]))
+            if not slice.getnnz():
+                self.matrices.append(sp.csr_matrix(np.zeros(slice.shape[1])))
+                self.origins.append([])
+                self.cpgs.append([])
+                self.sources.append([])
+            else:
+                row_filt = slice.getnnz(1)>0
+                self.matrices.append(slice[row_filt]) #remove empty rows
+                self.origins.append(origins[row_filt])
+                self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
+                self.sources.append(np.array([mapper.index_to_source(i)
+                                              for i in np.arange(slice.shape[0])[row_filt]]))
 
     def file_list_to_csr(self, chrom, intervals):
         '''
