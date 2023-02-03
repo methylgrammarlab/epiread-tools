@@ -80,8 +80,9 @@ class EpireadReader:
             slice.eliminate_zeros()
             if not slice.getnnz():
                 self.matrices.append(sp.csr_matrix(np.zeros(slice.shape[1])))
+                self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
+
                 self.origins.append([])
-                self.cpgs.append([])
                 self.sources.append([])
             else:
                 row_filt = slice.getnnz(1)>0
