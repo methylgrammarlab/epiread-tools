@@ -82,8 +82,8 @@ class EpireadReader:
                 self.matrices.append(sp.csr_matrix(np.zeros(slice.shape[1])))
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
 
-                self.origins.append([])
-                self.sources.append([])
+                self.origins.append(np.array([]))
+                self.sources.append(np.array([]))
             else:
                 row_filt = slice.getnnz(1)>0
                 self.matrices.append(slice[row_filt]) #remove empty rows
