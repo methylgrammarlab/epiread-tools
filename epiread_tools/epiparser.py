@@ -87,7 +87,7 @@ class EpireadReader:
             else:
                 row_filt = slice.getnnz(1)>0
                 self.matrices.append(slice[row_filt]) #remove empty rows
-                self.origins.append(origins[row_filt])
+                # self.origins.append(origins[row_filt]) #TODO: fix
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
                 self.sources.append(np.array([mapper.index_to_source(i)
                                               for i in np.arange(slice.shape[0])[row_filt]]))
