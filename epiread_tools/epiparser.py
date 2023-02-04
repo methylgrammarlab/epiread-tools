@@ -79,11 +79,11 @@ class EpireadReader:
             slice = methylation_matrix[:,start:end]
             slice.eliminate_zeros()
             if not slice.getnnz():
-                self.matrices.append(sp.csr_matrix(np.zeros(slice.shape[1])))
+                self.matrices.append(sp.csr_matrix(np.zeros((1,slice.shape[1]))))
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
 
-                self.origins.append(np.array([]))
-                self.sources.append(np.array([]))
+                self.origins.append(np.array([-1]))
+                self.sources.append(np.array([-1]))
             else:
                 row_filt = slice.getnnz(1)>0
                 self.matrices.append(slice[row_filt]) #remove empty rows
