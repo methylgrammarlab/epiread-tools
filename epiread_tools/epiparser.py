@@ -87,31 +87,11 @@ class EpireadReader:
             else:
                 row_filt = slice.getnnz(1)>0
                 self.matrices.append(slice[row_filt]) #remove empty rows
-                # self.origins.append(origins[row_filt]) #TODO: fix
+                self.origins.append(origins[row_filt]) 
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
                 self.sources.append(np.array([mapper.index_to_source(i)
                                               for i in np.arange(slice.shape[0])[row_filt]]))
-
-    def file_list_to_csr(self, chrom, intervals):
-        '''
-        read files at designated intervals to matrix
-        :return: scipy sparse matrix, mapper
-        '''
-        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=1500)
-        small_matrices = []
-        sources = []
-        origins = []
-        i = 0
-        for epi_file in self.config['epiread_files']:
-            small_matrix, origin = self.to_csr(epi_file, mapper)
-            small_matrices.append(small_matrix)
-            origins.append(origin)
-            sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
-            i += small_matrix.shape[0]
-        mapper.init_index_to_source(sources)
-        methylation_matrix = sp.vstack(small_matrices, dtype=int)
-        return methylation_matrix, mapper, np.hstack(origins)
-
+                
     def to_csr(self, epi_file, mapper):
         row = []
         col = []
@@ -131,8 +111,34 @@ class EpireadReader:
                     col.extend(list(range(mapper.rel_to_ind(intersect_start), mapper.rel_to_ind(intersect_end - 1) + 1)))
                     for cpg in record.methylation[intersect_start - rel_start:intersect_end - rel_start]:
                         data.append(methylation_state[cpg])
-        mat = sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
+        if not len(data): #no coverage
+            return None, None
+        mat = sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int) 
         return mat, origin
+
+
+    def file_list_to_csr(self, chrom, intervals):
+        '''
+        read files at designated intervals to matrix
+        :return: scipy sparse matrix, mapper
+        '''
+        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=1500)
+        small_matrices = []
+        sources = []
+        origins = []
+        i = 0
+        for epi_file in self.config['epiread_files']:
+            small_matrix, origin = self.to_csr(epi_file, mapper)
+            if small_matrix is None: #no coverage
+                continue
+            small_matrices.append(small_matrix)
+            origins.append(origin)
+            sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
+            i += small_matrix.shape[0]
+        mapper.init_index_to_source(sources)
+        methylation_matrix = sp.vstack(small_matrices, dtype=int)
+        return methylation_matrix, mapper, np.hstack(origins)
+
 
 
 atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"] #TODO: delete or move
@@ -301,6 +307,8 @@ class CoordsEpiread(EpireadReader):
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
                     data.append(methylation_state[cpg])
+        if not len(data): #no coverage
+            return None, None
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int), origin
 
 class EpiSNP(EpireadReader):
