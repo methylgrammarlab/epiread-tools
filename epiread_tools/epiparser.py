@@ -72,8 +72,10 @@ class EpireadReader:
         :return:
         '''
         intervals = sorted(intervals, key=lambda x: x.start)
-        self.interval_order.extend(intervals)
         methylation_matrix, mapper, origins = self.file_list_to_csr(chrom, intervals)
+        if methylation_matrix is None:
+            return
+        self.interval_order.extend(intervals)
         window_list = mapper.get_ind_intervals(intervals)
         for start, end in window_list:
             slice = methylation_matrix[:,start:end]
@@ -136,6 +138,8 @@ class EpireadReader:
             sources.append((i, i + small_matrix.shape[0], mapper.sample_to_id[epi_file]))
             i += small_matrix.shape[0]
         mapper.init_index_to_source(sources)
+        if not len(small_matrices): #no coverage
+            return None, mapper, None
         methylation_matrix = sp.vstack(small_matrices, dtype=int)
         return methylation_matrix, mapper, np.hstack(origins)
 
