@@ -370,6 +370,21 @@ def calc_methylated(matrices):
                         for methylation_matrix in matrices]
     return methylation
 
+def calc_percent_U(mat, u_threshold=0.25):
+    '''
+    calc percent unmehtylated reads in mat
+    DOES NOT FILTER BY #CPG
+    DOES NOT FILTER EMPTY READS
+    :param mat: np array
+    :param u_threshold: maximal prop of methylation
+    :return: %U reads
+    '''
+    meth = (mat == METHYLATED).sum(axis=1)
+    unmeth = (mat == UNMETHYLATED).sum(axis=1)
+    is_u = (meth / (unmeth + meth)) <= u_threshold
+    percent_u = np.sum(is_u) / mat.shape[0]
+    return percent_u
+
 def in_intervals(cpg, intervals):
     '''
     check if cpg in intervals. assumes cpg and
