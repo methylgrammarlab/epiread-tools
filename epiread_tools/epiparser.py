@@ -287,6 +287,22 @@ class EpiAtlasReader:
         thetaA = [np.array(eval(x)) for x in df["thetaA"].values.tolist()]
         thetaB = [np.array(eval(x)) for x in df["thetaB"].values.tolist()]
         return self.theta_intervals, thetaA, thetaB
+
+class UXMAtlasReader():
+    '''
+    read u_percent files created with bimodal_detector
+    assumes each row represents a region
+    '''
+    def __init__(self, config):
+        self.config = config
+
+    def read(self): #will not work with overlapping regions / walker
+        with open(self.config["percent_u"], "r") as infile:
+            df = pd.read_csv(infile, sep="\t")
+        self.intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.iloc[:,:3].values]
+        percent_u = df.iloc[:,6:6+len(self.config["cell_types"])].values
+        return self.intervals, percent_u
+
 #%%
 #epiread objects
 
