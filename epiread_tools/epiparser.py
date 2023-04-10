@@ -51,6 +51,10 @@ class EpireadReader:
             self.genomic_intervals = bedgraph_to_intervals(config['genomic_intervals'], config['header'])
         else:
             self.genomic_intervals = [GenomicInterval(x) for x in config['genomic_intervals']]
+        if 'minimal_cpg_per_read' in config:
+            self.minimal_cpg_per_read = config['minimal_cpg_per_read']
+        else:
+            self.minimal_cpg_per_read = 0
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
         self.interval_order, self.matrices, self.cpgs, self.sources, self.origins = [],[],[],[],[]
         self.row = EpiRow
@@ -87,7 +91,7 @@ class EpireadReader:
                 self.origins.append(np.array([-1]))
                 self.sources.append(np.array([-1]))
             else:
-                row_filt = slice.getnnz(1)>0
+                row_filt = slice.getnnz(1)>self.minimal_cpg_per_read
                 self.matrices.append(slice[row_filt]) #remove empty rows
                 self.origins.append(origins[row_filt]) 
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
@@ -306,6 +310,7 @@ class UXMAtlasReader():
 #%%
 #epiread objects
 
+
 class CoordsEpiread(EpireadReader):
 
     def __init__(self, fp):
@@ -330,6 +335,31 @@ class CoordsEpiread(EpireadReader):
         if not len(data): #no coverage
             return None, None
         return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int), origin
+
+
+class PatReader(EpireadReader):
+
+    def __init__(self, fp):
+        super().__init__(fp)
+        self.row = PatRow
+
+    def to_csr(self, epi_file, mapper):
+        row = []
+        col = []
+        data = []
+        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals)) #should be merged, unslopped
+        i=0
+        for i, epiread in enumerate(epiread_iterator):
+            record = self.row(*epiread.split(TAB))
+            for abs, cpg in record.get_coord_methylation():
+                for j in range(record.count): #times pattern was observed
+                    if mapper.abs_to_rel[abs] in mapper.all_rel:
+                        row.append(i)
+                        col.append(mapper.abs_to_ind(abs))
+                        data.append(methylation_state[cpg])
+        if not len(data): #no coverage
+            return None, None
+        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
 
 class EpiSNP(EpireadReader):
 
@@ -435,6 +465,29 @@ class CoordsRow(EpiRow):
         '''
         return self.coords[-1]
 
+class PatRow(EpiRow):
+    def __init__(self, chrom, start, methylation, count):
+        self.read_start = start
+        self.chrom = chrom
+        self.coords = list(range(self.strand, self.start+len(methylation)))
+        self.count = count
+
+
+    def get_coord_methylation(self):
+        '''
+        pairs of coordinate, methylation
+        e.g. 2051767,C
+        :return:
+        '''
+        yield from zip(self.coords, self.methylation)
+
+    def get_end(self):
+        '''
+        get last coordinate
+        :return:
+        '''
+        return self.coords[-1]
+
 class SNPRow(EpiRow):
 
     def __init__(self, chrom, min_start, max_end, read_name, read_pos, strand, read_start, methylation,
@@ -473,7 +526,7 @@ def tabix_verify(fp):
     assert fp.endswith(".gz")  # gzipped file
     assert os.path.isfile(fp + ".tbi")  # index file exists
 
-epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread}
+epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread, "pat": PatReader}
 
 #%%
 # config = {"epiread_files": ["/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_6_rep9_mixture.epiread.gz"],
