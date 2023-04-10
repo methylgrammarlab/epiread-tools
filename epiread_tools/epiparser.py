@@ -54,7 +54,7 @@ class EpireadReader:
         if 'minimal_cpg_per_read' in config:
             self.minimal_cpg_per_read = config['minimal_cpg_per_read']
         else:
-            self.minimal_cpg_per_read = 0
+            self.minimal_cpg_per_read = 1
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
         self.interval_order, self.matrices, self.cpgs, self.sources, self.origins = [],[],[],[],[]
         self.row = EpiRow
@@ -91,7 +91,7 @@ class EpireadReader:
                 self.origins.append(np.array([-1]))
                 self.sources.append(np.array([-1]))
             else:
-                row_filt = slice.getnnz(1)>self.minimal_cpg_per_read
+                row_filt = slice.getnnz(1)>= self.minimal_cpg_per_read
                 self.matrices.append(slice[row_filt]) #remove empty rows
                 self.origins.append(origins[row_filt]) 
                 self.cpgs.append(np.array([mapper.ind_to_abs(x) for x in range(start, end)]))
