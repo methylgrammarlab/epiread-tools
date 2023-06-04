@@ -98,6 +98,12 @@ class GenomicInterval:
             return GenomicInterval().set_from_positions(self.chrom, self.start+n, self.end+n)
 
     def slop(self, n, inplace=False):
+        '''
+        this does not take into account chromosome edges
+        :param n:  bases to add
+        :param inplace: edit existing instance
+        :return: slopped GenomicInterval
+        '''
         start = max(self.start-n,0) #no neg coordinates
         end = self.end + n #might be bigger than chrom size, does it matter?
         if inplace:
@@ -240,7 +246,6 @@ class Mapper:
         rel_intervals = []
         for interval in genomic_intervals:
             rel_intervals.append((bisect_left(self.cpgs, interval.start), bisect_right(self.cpgs, interval.end)))
-            #TODO: test bisect
         return rel_intervals
 
     def init_rel_to_mat_ind(self):

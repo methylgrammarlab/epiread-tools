@@ -21,19 +21,23 @@ cd epiread-tools
 python setup.py install
 ```
 
-To parse epiread files:
-The config.json file contains the following parameters:
-* "cpg_coordinates": tab delimited, gzipped file with coordinates of CpG sites
-* "genomic_intervals": intervals to process, either comma delimited or a bed file
-* "bedfile": set True if genomic_intervals are in a bed file
-* "header": set True if genomic_intervals file has a header (only relevant if "bedfile" is True)
-* "epiread_files": list of epiread files, each file is gzipped 
-* "epiformat": format of epiread file, currently only old_epiread, old_epiread_A and pat
-* "outfile": output file path
-* "minimal_cpg_per_read": default 1, only process reads with at least n CpGs
+#### Configuration Parameters
+
+The following parameters can be specified in the `config` dictionary or overwritten with specific arguments:
+
+- `cpg_coordinates` (str): Path to the tab-delimited, gzipped file containing the coordinates of CpG sites.
+- `genomic_intervals` (str): Intervals to process, either comma-delimited chrN:start-stop or a bed file.
+- `bedfile` (bool): Set to True if the genomic intervals are in a bed file.
+- `header` (bool): Set to True if the genomic intervals file has a header (only relevant if `bedfile` is True).
+- `epiread_files` (list): List of gzipped epiread files.
+- `epiformat` (str): Format of the epiread files. Currently, only supports `old_epiread`, `old_epiread_A`, and `pat`.
+- `outfile` (str): Output file path for the generated bedgraph file.
+- `minimal_cpg_per_read` (int): Minimum number of CpGs required per read. Default is 1.
+
+All parameters can be specified with a `config.json` file, and specific arguments can overwrite the JSON file.
 
 
-convert epiread to bedgraph
+#### convert epiread to bedgraph
 ```
 epireadToBedgraph -j <config.json>
 ```

@@ -5,6 +5,6 @@
   "outfile": "test_output.bedgraph",
   "epiformat": "old_epiread_A",
   "header": false,
-  "bedfile": true,
+  "bedfile": false,
 
 }
