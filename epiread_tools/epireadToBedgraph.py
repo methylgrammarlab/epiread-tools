@@ -122,7 +122,7 @@ class EpiToBedgraph():
 @click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
 @click.option('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
               is_flag=True, default=False)
-@click.option('--header', is_flag=True, help="bedgraph with regions to process has header")
+@click.option('--header', is_flag=True, default=False, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 @click.version_option()
 @click.pass_context
