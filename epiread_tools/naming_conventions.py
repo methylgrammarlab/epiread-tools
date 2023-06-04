@@ -28,7 +28,7 @@
 
 #%%
 from collections import defaultdict
-initial_high, initial_low = 0.8, 0.15
+initial_high, initial_low = 0.8, 0.15 #initialization for EM
 pseudocount = 1e-10 #same as methpipe
 NOVAL, UNMETHYLATED, METHYLATED = range(3)
 A,C,T,G, R, Y = range(1, 7)
@@ -52,5 +52,4 @@ lower_conf_thresh = 0.1
 
 
 CHROMOSOMES = ["chr" + str(x) for x in [*range(1,23), "X", "Y", "M"]]
-
-#TODO: add dict of epiread versions to format (has SNPs, snp comments, coords)
+atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"]

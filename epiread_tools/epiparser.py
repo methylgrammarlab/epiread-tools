@@ -149,7 +149,7 @@ class EpireadReader:
 
 
 
-atlas_formats = ["meth_cov", "beta_matrices", "lambda_matrices"] #TODO: delete or move
+
 '''
 a note on strandedness:
 All positions must match the cpg file. To process 

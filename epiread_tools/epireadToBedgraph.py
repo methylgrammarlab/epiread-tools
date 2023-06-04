@@ -42,27 +42,40 @@ from epiread_tools.em_utils import calc_coverage, calc_methylated
 class EpiToBedgraph():
 
     def __init__(self, config):
+        '''
+        Initializes an instance of epiread to bedgraph transformer
+
+        Args:
+            config (dict): Configuration settings for the EpiToBedgraph instance.
+            Should contain:
+            epiformat - epiread format (old_epiread, old_epiread_A, pat)
+            outfile - output file path
+        '''
         self.config = config
         self.reader = epiformat_to_reader[self.config["epiformat"]]
 
     def read_mixture(self):
+        '''
+        Reads the epiread and retrieves matrices, CpGs, and origins.
+        '''
         reader = self.reader(self.config)
         self.interval_order, self.matrices, self.cpgs, self.origins = reader.get_matrices_for_intervals()
 
     def calc_coverage(self):
         '''
         calculate coverage per CpG
-        :return:
         '''
         self.coverage = calc_coverage(self.matrices)
 
     def calc_methylated(self):
+        '''
+        Calculates the methylated counts per CpG based on the matrices.
+        '''
         self.methylation = calc_methylated(self.matrices)
 
     def calc_mean_methylation(self):
         '''
         mean methylation per CpG with coverage
-        :return:
         '''
         #skip all-zero columns, save indices for later
         self.mean_methylation = []
@@ -73,7 +86,6 @@ class EpiToBedgraph():
     def write_bedgraph(self):
         '''
         append output to output file
-        :return:
         '''
         out_arrs = []
         for i, interval in enumerate(self.interval_order):
@@ -136,11 +148,3 @@ if __name__ == '__main__':
     main()
 
 #%%
-#
-# config = {"bedfile":True, "header": False, "cpg_coordinates": "/Users/ireneu/PycharmProjects/old_in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz",
-#           "epiread_files": ["/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/test_6_rep5_mixture.epiread.gz"],
-#           "genomic_intervals": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/test_tims.txt", "epiformat":"old_epiread",
-#           "outfile":"abnana"}
-# runner = EpiToBedgraph(config)
-# runner.tobedgraph()
-#
