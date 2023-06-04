@@ -21,11 +21,23 @@ cd epiread-tools
 python setup.py install
 ```
 
+To parse epiread files:
+The config.json file contains the following parameters:
+* "cpg_coordinates": tab delimited, gzipped file with coordinates of CpG sites
+* "genomic_intervals": intervals to process, either comma delimited or a bed file
+* "bedfile": set True if genomic_intervals are in a bed file
+* "header": set True if genomic_intervals file has a header (only relevant if "bedfile" is True)
+* "epiread_files": list of epiread files, each file is gzipped 
+* "epiformat": format of epiread file, currently only old_epiread, old_epiread_A and pat
+* "outfile": output file path
+* "minimal_cpg_per_read": default 1, only process reads with at least n CpGs
+
+
 convert epiread to bedgraph
 ```
 epireadToBedgraph -j <config.json>
 ```
-any parameter in the config file can be overwriten via the command line, e.g.:
+any parameter in the config file can be overwritten via the command line, e.g.:
 
 ```
 epireadToBedgraph -j <config.json> --outfile=<output_file> -i chr3:50-150,ch10:440-450
