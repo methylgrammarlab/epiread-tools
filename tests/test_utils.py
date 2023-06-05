@@ -28,7 +28,7 @@ from epiread_tools.em_utils import find_intersection
 import numpy as np
 
 
-def test_intersection(self):
+def test_intersection():
     #no intersection
     assert not len(find_intersection(np.array([1,3,100,110]), 50, 55))
     #two intersections
