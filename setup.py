@@ -42,8 +42,9 @@ setuptools.setup(
     },
     license='MIT',
     packages=['epiread_tools'],
+    # setup_requires=['wheel'],
     # package_dir={"src": "src"},
-    install_requires=['numpy', 'pandas', 'scipy', 'pysam', "Click"],
+    install_requires=['numpy', 'pandas', 'scipy', 'pysam', 'pytest',"Click"],
     include_package_data=True,
     entry_points={
     "console_scripts":[
