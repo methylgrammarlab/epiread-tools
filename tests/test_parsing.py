@@ -70,8 +70,8 @@ def test_overlapping_regions(config_dict):
     runner = EpiToBedgraph(config_dict)
     runner.read_mixture()
     runner.calc_coverage()
-    assert all(runner.coverage[0]==runner.coverage[1])
-    assert runner.coverage[0]==7
+    assert (runner.coverage[0]==runner.coverage[1]).all()
+    assert runner.coverage[0][0]==7
 
 
 
