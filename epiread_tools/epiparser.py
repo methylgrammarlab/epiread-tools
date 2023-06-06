@@ -447,8 +447,8 @@ class CoordsRow(EpiRow):
             self.read_start = self.coords[0]
             super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
                      snp_start, snps, origin)
-            assert (len(self.coords) == len(self.methylation),
-                    "unequal length of coordinates and methylation, did you mean old_epiread?")
+            assert len(self.coords) == len(
+                self.methylation), "unequal length of coordinates and methylation, did you mean old_epiread?"
 
     def get_coord_methylation(self):
         '''
@@ -529,17 +529,3 @@ def tabix_verify(fp):
 epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread, "pat": PatReader}
 
 #%%
-# config = {"epiread_files": ["/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_6_rep9_mixture.epiread.gz"],
-#           "atlas_file": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_atlas_over_tims.txt",
-#           "genomic_intervals": "/Users/ireneu/PycharmProjects/deconvolution_models/tests/data/EM_regions_100_processed_tims.txt",
-#           "cpg_coordinates":  "/Users/ireneu/PycharmProjects/in-silico_deconvolution/debugging/hg19.CpG.bed.sorted.gz",
-#            "outfile":"sample_output.something",
-#             "epiformat" : "old_epiread",
-#           "bedfile":True,
-#           "header":True,
-#           "max_iterations":1000,
-#           "random_restarts":1,
-#           "stop_criterion":0.001
-#           }
-# em_model = AtlasReader(config)
-# em_model.meth_cov_to_beta_matrices()
