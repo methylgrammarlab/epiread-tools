@@ -73,6 +73,16 @@ def test_overlapping_regions(config_dict):
     assert (runner.coverage[0]==runner.coverage[1]).all()
     assert runner.coverage[0][0]==7
 
+def test_pat(config_dict):
+    test_specific = {"genomic_intervals" : ["chr1:1849472-1849474", "chr10:14849545-14849554"],
+    "epiread_files" : ["tests/data/pat.pat.gz"],
+                     "epiformat":"pat",
+    "cpg_coordinates":"tests/data/pat_cpg_file.bed.gz"}
+    config_dict.update(test_specific)
+    runner = EpiToBedgraph(config_dict)
+    runner.read_mixture()
+    runner.calc_coverage()
+    assert runner.coverage[0][0]==11
 
 
 

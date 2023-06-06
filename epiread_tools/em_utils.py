@@ -133,7 +133,7 @@ def cut(fp, intervals):
     tabixfile = pysam.TabixFile(fp)
     for interval in intervals:
         try:
-            yield from tabixfile.fetch(interval.chrom, interval.start, interval.end)
+            yield from tabixfile.fetch(interval.chrom, interval.start-1, interval.end)
         except ValueError:  # no coverage for this region in file
             continue
 

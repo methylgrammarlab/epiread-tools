@@ -146,3 +146,15 @@ def main(ctx, **kwargs):
 if __name__ == '__main__':
     main()
 
+# config = {
+#       "outfile": "test_output.bedgraph",
+#       "header": False,
+#       "bedfile": False,
+# "genomic_intervals": ["chr1:1849472-1849474", "chr10:14849545-14849554"],
+#                  "epiread_files": ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/pat.pat.gz"],
+#                  "epiformat": "pat",
+#                  "cpg_coordinates": "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/pat_cpg_file.bed.gz"}
+# runner = EpiToBedgraph(config)
+# runner.read_mixture()
+# runner.calc_coverage()
+

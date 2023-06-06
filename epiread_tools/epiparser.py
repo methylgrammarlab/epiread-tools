@@ -58,6 +58,7 @@ class EpireadReader:
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
         self.interval_order, self.matrices, self.cpgs, self.sources, self.origins = [],[],[],[],[]
         self.row = EpiRow
+        self.mapper_slop = 1500
 
     def get_matrices_for_intervals(self):
         self.parse_multiple_chromosomes()
@@ -128,7 +129,7 @@ class EpireadReader:
         read files at designated intervals to matrix
         :return: scipy sparse matrix, mapper
         '''
-        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=1500)
+        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=self.mapper_slop)
         small_matrices = []
         sources = []
         origins = []
@@ -342,24 +343,30 @@ class PatReader(EpireadReader):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = PatRow
+        self.mapper_slop = 20
 
     def to_csr(self, epi_file, mapper):
+
         row = []
         col = []
         data = []
-        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals)) #should be merged, unslopped
-        i=0
+        epiread_iterator = cut(epi_file,
+                               mapper.merge_intervals(mapper.original_intervals))  # should be merged, unslopped
+        row_ind = 0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             for abs, cpg in record.get_coord_methylation():
-                for j in range(record.count): #times pattern was observed
-                    if mapper.abs_to_rel[abs] in mapper.all_rel:
-                        row.append(i)
+                if mapper.abs_to_rel[abs] in mapper.all_rel:
+                    for j in range(record.count):  # times pattern was observed
+                        row.append(row_ind+j)  # Append the current row_ind
                         col.append(mapper.abs_to_ind(abs))
                         data.append(methylation_state[cpg])
+            row_ind += j+1  # Increment row_ind after appending the rows
+
         if not len(data): #no coverage
             return None, None
-        return sp.csr_matrix((data, (row, col)), shape=(i + 1, mapper.max_cpgs), dtype=int)
+
+        return sp.csr_matrix((data, (row, col)), shape=(row_ind + 1, mapper.max_cpgs), dtype=int), np.zeros(shape=row_ind+1)
 
 class EpiSNP(EpireadReader):
 
@@ -467,10 +474,11 @@ class CoordsRow(EpiRow):
 
 class PatRow(EpiRow):
     def __init__(self, chrom, start, methylation, count):
-        self.read_start = start
+        self.read_start = int(start)
         self.chrom = chrom
-        self.coords = list(range(self.strand, self.start+len(methylation)))
-        self.count = count
+        self.methylation = methylation
+        self.coords = list(range(self.read_start, self.read_start+len(methylation)))
+        self.count = int(count)
 
 
     def get_coord_methylation(self):
