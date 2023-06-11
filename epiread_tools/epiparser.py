@@ -305,7 +305,7 @@ class UXMAtlasReader():
         with open(self.config["percent_u"], "r") as infile:
             df = pd.read_csv(infile, sep="\t")
         self.intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.iloc[:,:3].values]
-        percent_u = df.iloc[:,6:6+len(self.config["cell_types"])].values
+        percent_u = df.iloc[:,6:].values
         return self.intervals, percent_u
 
 #%%

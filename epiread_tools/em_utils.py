@@ -150,6 +150,8 @@ class Mapper:
         :param epiread_files: list of epiread files
         :param CpG_file: file in bed format of cpg coordinates
         :param min_dist: minimun distance between intervals
+        :param slop: how many bp to load around each interval. should be > read_length
+
         '''
         self.chrom = chrom
         self.original_intervals = intervals
