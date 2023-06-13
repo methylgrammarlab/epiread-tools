@@ -106,7 +106,8 @@ class EpireadReader:
         origin = []
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
-        epiread_iterator = cut(epi_file, mapper.merged_intervals)
+        # epiread_iterator = cut(epi_file, mapper.merged_slopped_intervals)
+        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals))
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             rel_start = mapper.abs_to_rel[record.get_start()]
@@ -228,7 +229,7 @@ class AtlasReader:
         for i, cpg in enumerate(cpgs):
             if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
                 mat[:, mapper.abs_to_ind(cpg)] = vals[:, chrom_filter][:, i]
-            elif not in_intervals(cpg, mapper.merged_intervals):
+            elif not in_intervals(cpg, mapper.merged_slopped_intervals):
                 print("not in intervals", cpg)
                 pass
             else:
@@ -244,9 +245,7 @@ class AtlasReader:
         :return: list of matrix per interval
         '''
         matrices = []
-        interval_order = []
         intervals = sorted(intervals, key=lambda x: x.start)
-        # interval_order.extend([str(x) for x in intervals])
         mapper = Mapper(chrom, intervals, [], self.config['cpg_coordinates'], False)  # init mapping
         window_list = mapper.get_ind_intervals(intervals)
         mat = self.align_vals(chrom, mapper, vals)
@@ -328,7 +327,7 @@ class CoordsEpiread(EpireadReader):
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             origin.append(record.origin)
-            for abs, cpg in record.get_coord_methylation(): ###
+            for abs, cpg in record.get_coord_methylation():
                 if mapper.abs_to_rel[abs] in mapper.all_rel:
                     row.append(i)
                     col.append(mapper.abs_to_ind(abs))
@@ -375,7 +374,7 @@ class EpiSNP(EpireadReader):
         self.row = SNPRow
 
     def to_csr(self,epi_file, mapper): #problem: aligning
-        epiread_iterator = cut(epi_file, mapper.merged_intervals)
+        epiread_iterator = cut(epi_file, mapper.merged_slopped_intervals)
         row = []
         col = []
         data = []

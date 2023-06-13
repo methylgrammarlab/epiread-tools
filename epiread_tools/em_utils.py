@@ -161,11 +161,11 @@ class Mapper:
         self.slop = slop
 
         self.slopped_intervals = [x.slop(slop) for x in self.original_intervals]
-        self.merged_intervals = self.merge_intervals(self.slopped_intervals)
+        self.merged_slopped_intervals = self.merge_intervals(self.slopped_intervals)
         self.init_sample_ids()
         self.load_CpGs()
         self.load_snps()
-        self.rel_intervals = self.get_nearest_rel_intervals(self.merged_intervals)
+        self.rel_intervals = self.get_nearest_rel_intervals(self.merged_slopped_intervals)
         self.init_rel_to_mat_ind()
 
 
@@ -177,7 +177,7 @@ class Mapper:
         relative snps
         '''
         #add padding to every interval, merge if adjacent, translate to ind
-        bins = list(chain.from_iterable([(interval.start, interval.end) for interval in self.merged_intervals]))
+        bins = list(chain.from_iterable([(interval.start, interval.end) for interval in self.merged_slopped_intervals]))
         bins = np.sort(np.array(bins))
         bins[::2] -= padding
         bins[1::2] += padding
@@ -232,7 +232,7 @@ class Mapper:
         relative coordinates
         '''
         CpGs = []
-        for record in cut(self.CpG_file, self.merged_intervals):
+        for record in cut(self.CpG_file, self.merged_slopped_intervals):
             CpGs.append(int(record.split(TAB)[1]))  # start position in bed format
         CpGs = np.array(CpGs)
         rel_to_abs = dict(enumerate(CpGs))
