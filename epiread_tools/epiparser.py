@@ -233,7 +233,7 @@ class AtlasReader:
                 print("not in intervals", cpg)
                 pass
             else:
-                raise KeyError(cpg, "atlas start doesn't match cpg file")
+                raise KeyError(cpg, f"Atlas coordinate {chrom}:{cpg} does not fall on CpG in CpGs file. Maybe a problem with liftOver of the atlas?")
         return mat
 
     def parse_one_chromosome(self, chrom, intervals, vals):
@@ -342,7 +342,7 @@ class PatReader(EpireadReader):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = PatRow
-        self.mapper_slop = 20
+        self.mapper_slop = 50
 
     def to_csr(self, epi_file, mapper):
 
