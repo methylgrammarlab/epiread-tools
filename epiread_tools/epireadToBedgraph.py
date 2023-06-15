@@ -113,6 +113,7 @@ class EpiToBedgraph:
 
 #%%
 
+
 @click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 @click.option('--cpg_coordinates', help='sorted cpg bed file')
 @click.option('--epiread_files', help='comma delimited epiread paths')
@@ -132,12 +133,13 @@ def main(ctx, **kwargs):
     if kwargs["json"]:
         config = json.load(kwargs["json"])
     else:
-        config= {"epiformat":"old_epiread", "bedfile":False}
+        config= {"epiformat":"old_epiread"}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
+
     if config["epiread_files"]:
         config['epiread_files'] = config['epiread_files'].split(",")
-    if config["intervals"]:
+    if not config["bedfile"]:
         config['genomic_intervals'] = config["intervals"].split(",")
     if config["coords"]: #flag
         config['epiformat'] = "old_epiread_A"
@@ -147,16 +149,3 @@ def main(ctx, **kwargs):
 
 if __name__ == '__main__':
     main()
-
-# config = {
-#       "outfile": "test_output.bedgraph",
-#       "header": False,
-#       "bedfile": False,
-# "genomic_intervals": ["chr1:1849472-1849474", "chr10:14849545-14849554"],
-#                  "epiread_files": ["/Users/ireneu/PycharmProjects/epiread-tools/tests/data/pat.pat.gz"],
-#                  "epiformat": "pat",
-#                  "cpg_coordinates": "/Users/ireneu/PycharmProjects/epiread-tools/tests/data/pat_cpg_file.bed.gz"}
-# runner = EpiToBedgraph(config)
-# runner.read_mixture()
-# runner.calc_coverage()
-
