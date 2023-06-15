@@ -123,6 +123,8 @@ class EpiToBedgraph:
               is_flag=True, default=False)
 @click.option('--header', is_flag=True, default=False, help="bedgraph with regions to process has header")
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
+@click.option('--epiformat',
+              type=click.Choice(['old_epiread','old_epiread_A','pat'], case_sensitive=False))
 @click.version_option()
 @click.pass_context
 def main(ctx, **kwargs):
