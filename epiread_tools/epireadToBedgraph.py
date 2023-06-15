@@ -119,7 +119,7 @@ class EpiToBedgraph:
 @click.option('--epiread_files', help='comma delimited epiread paths')
 @click.option('--outfile', help='output file path')
 @click.option('-j', '--json', help='run from json config file')
-@click.option('-i', '--intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
+@click.option('-i', '--genomic_intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
 @click.option('-b', '--bedfile', help='bed file chrom start end with interval(s) to process. tab delimited',
               is_flag=True, default=False)
 @click.option('--header', is_flag=True, default=False, help="bedgraph with regions to process has header")
