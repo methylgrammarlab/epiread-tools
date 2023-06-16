@@ -34,7 +34,8 @@ import click
 import sys
 
 import numpy as np
-from epiread_tools.epiparser import EpireadReader, CoordsEpiread, epiformat_to_reader
+from epiread_tools.epiparser import EpireadReader, CoordsEpiread, PatReader
+from epiread_tools.epiformat import epiformat_to_reader
 from epiread_tools.naming_conventions import *
 from epiread_tools.em_utils import calc_coverage, calc_methylated
 
@@ -147,5 +148,10 @@ def main(ctx, **kwargs):
     runner.tobedgraph()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
+config = {"cpg_coordinates": "/Users/ireneu/berman_lab/ALS/hg19_pat_cpg.bed.gz", "bedfile":True,
+          "genomic_intervals":"/Users/ireneu/berman_lab/ALS/pat_U250.bed", "outfile":"/Users/ireneu/berman_lab/ALS/test.bedgraph",
+          "epiformat":"pat", "header":False, "epiread_files":["/Users/ireneu/berman_lab/ALS/CTLR4.pat.gz"]}
+runner = EpiToBedgraph(config)
+runner.tobedgraph()

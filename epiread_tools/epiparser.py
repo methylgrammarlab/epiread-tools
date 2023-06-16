@@ -342,15 +342,17 @@ class PatReader(EpireadReader):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = PatRow
-        self.mapper_slop = 50
+        self.mapper_slop = 50 #to parse partial overlaps
+        self.load_slop = 20 #to load partial overlaps
 
     def to_csr(self, epi_file, mapper):
 
         row = []
         col = []
         data = []
+        slopped_intervals = [x.slop(self.load_slop) for x in mapper.original_intervals]
         epiread_iterator = cut(epi_file,
-                               mapper.merge_intervals(mapper.original_intervals))  # should be merged, unslopped
+                               mapper.merge_intervals(slopped_intervals))  # should be merged, unslopped
         row_ind = 0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -533,6 +535,5 @@ def tabix_verify(fp):
     assert fp.endswith(".gz")  # gzipped file
     assert os.path.isfile(fp + ".tbi")  # index file exists
 
-epiformat_to_reader = {"old_epiread": EpireadReader, "old_epiread_A": CoordsEpiread, "pat": PatReader}
 
 #%%
