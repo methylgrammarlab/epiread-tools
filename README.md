@@ -41,11 +41,12 @@ All parameters can be specified with a `config.json` file, and specific argument
 ```
 epireadToBedgraph -j <config.json>
 ```
-any parameter in the config file can be overwritten via the command line, e.g.:
+If you combine json with command line agruments. e.g.:
 
 ```
 epireadToBedgraph -j <config.json> --outfile=<output_file> -i chr3:50-150,ch10:440-450
 ```
+The JSON will override the command line arguments.
 
 To parse epiread with cpg coordinates use flag -A
 

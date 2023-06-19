@@ -131,12 +131,15 @@ class EpiToBedgraph:
 @click.pass_context
 def main(ctx, **kwargs):
     """ biscuit epiread to bedgraph converter. any command line options will override config"""
-    if kwargs["json"]:
-        config = json.load(kwargs["json"])
-    else:
-        config= {"epiformat":"old_epiread"}
+
+    config = {"epiformat":"old_epiread"}
     config.update(kwargs)
     config.update(dict([item.strip('--').split('=') for item in ctx.args]))
+    if kwargs["json"] is not None:
+        with open(kwargs["json"], "r") as jconfig:
+            config.update(json.load(jconfig))
+
+
 
     if config["epiread_files"]:
         config['epiread_files'] = config['epiread_files'].split(",")
