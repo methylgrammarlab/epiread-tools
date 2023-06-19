@@ -456,7 +456,7 @@ class CoordsRow(EpiRow):
             super().__init__(chrom, min_start, max_end, read_name, read_pos, strand, self.read_start, methylation,
                      snp_start, snps, origin)
             assert len(self.coords) == len(
-                self.methylation), "unequal length of coordinates and methylation, did you mean old_epiread?"
+                self.methylation), ",".join([chrom, min_start, max_end, read_name, coords,methylation]) +" unequal length of coordinates and methylation, did you mean old_epiread?"
 
     def get_coord_methylation(self):
         '''
