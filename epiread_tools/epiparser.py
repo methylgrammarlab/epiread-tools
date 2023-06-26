@@ -474,12 +474,13 @@ class CoordsRow(EpiRow):
         return self.coords[-1]
 
 class PatRow(EpiRow):
-    def __init__(self, chrom, start, methylation, count):
+    def __init__(self, chrom, start, methylation, count, origin=""):
         self.read_start = int(start)
         self.chrom = chrom
         self.methylation = methylation
         self.coords = list(range(self.read_start, self.read_start+len(methylation)))
         self.count = int(count)
+        self.origin = origin
 
 
     def get_coord_methylation(self):
