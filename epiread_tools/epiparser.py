@@ -346,7 +346,6 @@ class PatReader(EpireadReader):
         self.load_slop = 20 #to load partial overlaps
 
     def to_csr(self, epi_file, mapper):
-
         row = []
         col = []
         data = []

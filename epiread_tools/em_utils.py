@@ -130,7 +130,9 @@ def cut(fp, intervals):
     :param intervals: list of GenomicInterval of chunk
     :return: iterator of relevant records
     '''
-    tabixfile = pysam.TabixFile(fp)
+    # tabixfile = pysam.TabixFile(fp)
+    tabixfile = pysam.VariantFile(fp)
+
     for interval in intervals:
         try:
             yield from tabixfile.fetch(interval.chrom, interval.start-1, interval.end)
