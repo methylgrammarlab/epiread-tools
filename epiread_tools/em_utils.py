@@ -123,15 +123,17 @@ class GenomicInterval:
     def __len__(self):
         return self.get_genomic_size()
 
-def cut(fp, intervals):
+def cut(fp, intervals, variant=False):
     '''
     Tabix out interval from file, return reads
     in original format
     :param intervals: list of GenomicInterval of chunk
     :return: iterator of relevant records
     '''
-    # tabixfile = pysam.TabixFile(fp)
-    tabixfile = pysam.VariantFile(fp)
+    if variant:
+        tabixfile = pysam.VariantFile(fp)
+    else:
+        tabixfile = pysam.TabixFile(fp)
 
     for interval in intervals:
         try:
