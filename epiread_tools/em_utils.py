@@ -131,7 +131,7 @@ def cut(fp, intervals):
     :return: iterator of relevant records
     '''
 
-    tabixfile = pysam.TabixFile(fp)
+    tabixfile = pysam.TabixFile(fp, mode="r")
 
     for interval in intervals:
         try:
