@@ -127,8 +127,6 @@ class EpiToBedgraph:
 @click.option('-A', '--coords', is_flag=True, help='epiread files contain coords', default=False)
 @click.option('--epiformat',
               type=click.Choice(['old_epiread','old_epiread_A','pat'], case_sensitive=False))
-@click.option('--variant', help='epiread file is vcf .csi and not tabix .tbi',
-              is_flag=True, default=False)
 @click.version_option()
 @click.pass_context
 def main(ctx, **kwargs):

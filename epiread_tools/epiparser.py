@@ -107,7 +107,7 @@ class EpireadReader:
         i = 0
         rel_intervals = np.array(mapper.rel_intervals).flatten()
         # epiread_iterator = cut(epi_file, mapper.merged_slopped_intervals)
-        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals), self.config["variant"])
+        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals))
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
             rel_start = mapper.abs_to_rel[record.get_start()]
@@ -322,7 +322,7 @@ class CoordsEpiread(EpireadReader):
         col = []
         data = []
         origin = []
-        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals), self.config["variant"]) #should be merged, unslopped
+        epiread_iterator = cut(epi_file, mapper.merge_intervals(mapper.original_intervals)) #should be merged, unslopped
         i=0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -351,7 +351,7 @@ class PatReader(EpireadReader):
         data = []
         slopped_intervals = [x.slop(self.load_slop) for x in mapper.original_intervals]
         epiread_iterator = cut(epi_file,
-                               mapper.merge_intervals(slopped_intervals), self.config["variant"])  # should be merged, unslopped
+                               mapper.merge_intervals(slopped_intervals))  # should be merged, unslopped
         row_ind = 0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -375,7 +375,7 @@ class EpiSNP(EpireadReader):
         self.row = SNPRow
 
     def to_csr(self,epi_file, mapper): #problem: aligning
-        epiread_iterator = cut(epi_file, mapper.merged_slopped_intervals, self.config["variant"])
+        epiread_iterator = cut(epi_file, mapper.merged_slopped_intervals)
         row = []
         col = []
         data = []
