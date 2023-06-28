@@ -165,6 +165,7 @@ class AtlasReader:
         self.atlas = self.config['atlas_file']
         self.genomic_intervals = bedgraph_to_intervals(config['genomic_intervals'], config['header'])
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
+        self.mapper_slop = 0
 
     def meth_cov_to_beta_matrices(self):
         '''
@@ -246,7 +247,7 @@ class AtlasReader:
         '''
         matrices = []
         intervals = sorted(intervals, key=lambda x: x.start)
-        mapper = Mapper(chrom, intervals, [], self.config['cpg_coordinates'], False)  # init mapping
+        mapper = Mapper(chrom, intervals, [], self.config['cpg_coordinates'], slop=self.mapper_slop)  # init mapping
         window_list = mapper.get_ind_intervals(intervals)
         mat = self.align_vals(chrom, mapper, vals)
         for start, end in window_list:
