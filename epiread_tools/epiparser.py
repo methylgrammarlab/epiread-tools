@@ -165,7 +165,7 @@ class AtlasReader:
         self.atlas = self.config['atlas_file']
         self.genomic_intervals = bedgraph_to_intervals(config['genomic_intervals'], config['header'])
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
-        self.mapper_slop = 0
+        self.mapper_slop = 1
 
     def meth_cov_to_beta_matrices(self):
         '''
