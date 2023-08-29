@@ -450,6 +450,7 @@ class CoordsRow(EpiRow):
         if coords==NO_DATA: #snp row
             self.coords = []
             self.methylation = []
+            self.origin = origin
         else:
             self.coords = [int(x) for x in coords.split(COORD_SEP)]
             self.read_start = self.coords[0]
