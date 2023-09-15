@@ -135,7 +135,7 @@ def cut(fp, intervals):
 
     for interval in intervals:
         try:
-            yield from tabixfile.fetch(interval.chrom, interval.start-1, interval.end)
+            yield from tabixfile.fetch(interval.chrom, max(interval.start-1, 0), interval.end)
         except ValueError:  # no coverage for this region in file
             continue
 
