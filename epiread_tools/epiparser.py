@@ -91,6 +91,7 @@ class EpireadReader:
 
                 self.origins.append(np.array([-1]))
                 self.sources.append(np.array([-1]))
+
             else:
                 row_filt = slice.getnnz(1)>= self.minimal_cpg_per_read
                 self.matrices.append(slice[row_filt]) #remove empty rows
