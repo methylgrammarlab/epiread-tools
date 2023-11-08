@@ -249,7 +249,8 @@ class Mapper:
         '''
         rel_intervals = []
         for interval in genomic_intervals:
-            rel_intervals.append((bisect_left(self.cpgs, interval.start), bisect_right(self.cpgs, interval.end)))
+            rel_intervals.append((bisect_left(self.cpgs, interval.start), bisect_left(self.cpgs, interval.end))) 
+            # notice in cases where the end of the interval is a CpG start it would not be included
         return rel_intervals
 
     def init_rel_to_mat_ind(self):

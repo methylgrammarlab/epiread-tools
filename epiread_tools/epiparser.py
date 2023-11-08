@@ -227,10 +227,11 @@ class AtlasReader:
         mat = np.ones(shape=(self.beta.shape[0], mapper.max_cpgs))  # cell types by cpgs
         mat.fill(np.nan)
         chrom_filter = (self.atlas_chrom == chrom)
+        filt_vals = vals[:, chrom_filter]
         cpgs = self.atlas_start[chrom_filter]
         for i, cpg in enumerate(cpgs):
             if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
-                mat[:, mapper.abs_to_ind(cpg)] = vals[:, chrom_filter][:, i]
+                mat[:, mapper.abs_to_ind(cpg)] = filt_vals[:, i]
             elif not in_intervals(cpg, mapper.merged_slopped_intervals):
                 print("not in intervals", cpg)
                 pass
