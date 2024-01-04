@@ -112,6 +112,20 @@ class GenomicInterval:
             return self
         else:
             return GenomicInterval().set_from_positions(self.chrom, start, end)
+        
+    def left_slop(self, n, inplace=False):
+        '''
+        this does not take into account chromosome edges
+        :param n:  bases to add
+        :param inplace: edit existing instance
+        :return: slopped GenomicInterval
+        '''
+        start = max(self.start-n,0) #no neg coordinates
+        if inplace:
+            self.start = start
+            return self
+        else:
+            return GenomicInterval().set_from_positions(self.chrom, start, self.end)
 
     def __repr__(self):
         '''

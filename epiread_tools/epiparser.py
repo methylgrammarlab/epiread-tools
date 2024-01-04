@@ -58,7 +58,10 @@ class EpireadReader:
         self.intervals_per_chrom = split_intervals_to_chromosomes(self.genomic_intervals)
         self.interval_order, self.matrices, self.cpgs, self.sources, self.origins = [],[],[],[],[]
         self.row = EpiRow
-        self.mapper_slop = 1500
+        if "mapper_slop" in self.config:
+            self.mapper_slop = self.config["mapper_slop"]
+        else:
+            self.mapper_slop = 1500  # to parse partial overlaps
 
     def get_matrices_for_intervals(self):
         self.parse_multiple_chromosomes()
@@ -345,14 +348,20 @@ class PatReader(EpireadReader):
     def __init__(self, fp):
         super().__init__(fp)
         self.row = PatRow
-        self.mapper_slop = 100 #to parse partial overlaps
-        self.load_slop = 20 #to load partial overlaps
+        if "mapper_slop" in self.config:
+            self.mapper_slop = self.config["mapper_slop"]
+        else:
+            self.mapper_slop = 200 #to parse partial overlaps
+        if "load_slop" in self.config:
+            self.load_slop = self.config["load_slop"]
+        else:
+            self.load_slop = 40 #to load partial overlaps
 
     def to_csr(self, epi_file, mapper):
         row = []
         col = []
         data = []
-        slopped_intervals = [x.slop(self.load_slop) for x in mapper.original_intervals]
+        slopped_intervals = [x.left_slop(self.load_slop) for x in mapper.original_intervals]
         epiread_iterator = cut(epi_file,
                                mapper.merge_intervals(slopped_intervals))  # should be merged, unslopped
         row_ind = 0
