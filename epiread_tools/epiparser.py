@@ -361,9 +361,10 @@ class PatReader(EpireadReader):
         row = []
         col = []
         data = []
+        origins = []
         slopped_intervals = [x.left_slop(self.load_slop) for x in mapper.original_intervals]
         epiread_iterator = cut(epi_file,
-                               mapper.merge_intervals(slopped_intervals))  # should be merged, unslopped
+                               mapper.merge_intervals(slopped_intervals))  # should be merged
         row_ind = 0
         for i, epiread in enumerate(epiread_iterator):
             record = self.row(*epiread.split(TAB))
@@ -373,12 +374,13 @@ class PatReader(EpireadReader):
                         row.append(row_ind+j)  # Append the current row_ind
                         col.append(mapper.abs_to_ind(abs))
                         data.append(methylation_state[cpg])
+            for j in range(record.count):
+                origins.append(record.origin)
             row_ind += j+1  # Increment row_ind after appending the rows
 
         if not len(data): #no coverage
             return None, None
-
-        return sp.csr_matrix((data, (row, col)), shape=(row_ind + 1, mapper.max_cpgs), dtype=int), np.zeros(shape=row_ind+1)
+        return sp.csr_matrix((data, (row, col)), shape=(row_ind, mapper.max_cpgs), dtype=int), np.hstack(origins)
 
 class EpiSNP(EpireadReader):
 
