@@ -1,0 +1,26 @@
+# Existing exclusion
+deconvolution_models
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Build and packaging outputs
+/build/
+/dist/
+*.egg-info/
+.eggs/
+
+# Test and coverage outputs
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Local virtual environments
+.venv/
+venv/
+
+# macOS metadata
+.DS_Store

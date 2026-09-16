@@ -1,7 +1,7 @@
 ###################################################
 #
 # Script: epireadToBedGraph.py
-# Author: Irene Unterman
+# Author: Irene Unterman and Ben Berman
 # Description: parse epiread files and save mean
 # methylation per position
 #
@@ -60,6 +60,15 @@ class EpiToBedgraph:
         '''
         reader = self.reader(self.config)
         self.interval_order, self.matrices, self.cpgs, self.origins = reader.get_matrices_for_intervals()
+        print(f"Read {len(self.interval_order)} intervals from {self.config['epiread_files']}")
+#        print(f"\t{self.interval_order}\n")
+        print(f"Read {len(self.matrices)} matrices from {self.config['epiread_files']}\n")
+#        print(f"\t{self.matrices}\n")
+        print(f"Read {len(self.cpgs)} CpGs from {self.config['cpg_coordinates']}\n")
+#        print(f"\t{self.cpgs}\n")
+        print(f"Read {len(self.origins)} origins from {self.config['epiread_files']}\n")
+#        print(f"\t{self.origins}\n")
+
 
     def calc_coverage(self):
         '''
@@ -97,13 +106,19 @@ class EpiToBedgraph:
             arr[:,4]=self.coverage[i]
             if len(self.coverage[i]) > 1: #doesn't work when length == 1
                 arr = arr[(self.coverage[i]>0),:]
+                print(f"skipped {len(self.coverage[i])-len(arr)} zero coverage CpGs")
             elif len(self.coverage[i]) == 1 and not self.coverage[i][0]:
                 arr = np.array([]) #no coverage
+                print(f"skipped 1 zero coverage CpG")
+
             if arr.any():
                 out_arrs.append(arr)
 
-        with open(self.config["outfile"], "w") as outfile:
-            np.savetxt(outfile, np.vstack(out_arrs), delimiter=TAB, fmt='%s')
+        if out_arrs:
+            with open(self.config["outfile"], "w") as outfile:
+                np.savetxt(outfile, np.vstack(out_arrs), delimiter="\t", fmt="%s")
+        else:
+            print("No data to write to the output file.")
 
     def tobedgraph(self):
         self.read_mixture()
@@ -117,7 +132,7 @@ class EpiToBedgraph:
 
 @click.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 @click.option('--cpg_coordinates', help='sorted cpg bed file')
-@click.option('--epiread_files', help='comma delimited epiread paths')
+@click.option('--epiread_files', help='comma delimited epiread paths (required)')
 @click.option('--outfile', help='output file path')
 @click.option('-j', '--json', help='run from json config file')
 @click.option('-i', '--genomic_intervals', help='interval(s) to process. formatted chrN:start-end, separated by commas')
@@ -131,6 +146,33 @@ class EpiToBedgraph:
 @click.pass_context
 def main(ctx, **kwargs):
     """ biscuit epiread to bedgraph converter. any command line options will override config"""
+
+    # I merged in new parsing code, but haven't tested it yet.
+    # Commented out below is the old code that worked.
+
+        # if kwargs["json"]:
+        #     with open(kwargs["json"], "r") as json_file:
+        #         config = json.load(json_file)
+        # else:
+        #     config= {"epiformat":"old_epiread", "bedfile":False}
+
+        # for key, value in kwargs.items():
+        #     config.setdefault(key, value)
+
+        # config.update(dict([item.strip('--').split('=') for item in ctx.args]))
+        # if config["epiread_files"]:
+        #     if not isinstance(config["epiread_files"], list):
+        #         config['epiread_files'] = config['epiread_files'].split(",")
+        # else:
+        #     print("No epiread files provided.\n\n")
+        #     print(ctx.get_help())  # Print command-line usage        
+        #     sys.exit(1)
+
+        # if config["intervals"]:
+        #     config['genomic_intervals'] = config["intervals"].split(",")
+        # if config["coords"]: #flag
+        #     config['epiformat'] = "old_epiread_A"
+
 
     config = {"epiformat":"old_epiread"}
     config.update(kwargs)

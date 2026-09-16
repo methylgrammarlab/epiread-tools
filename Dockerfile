@@ -1,7 +1,7 @@
 # Use full python for building
 FROM python:3.11-bullseye as build
 
-# Create virtualenv for deployment
+# Create virtualenv for deployment (python3 executable will be in here and will give /opt/venv/lib precedence over PYTHONPATH)
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
@@ -17,8 +17,20 @@ RUN python3 setup.py install
 # Dev only
 COPY tests/ ./tests/
 
-# Use slim for deployment
-FROM python:3.11-slim-bullseye
+# Deconvolution models
+COPY deconvolution_models/ ./deconvolution_models/
+RUN pip install --upgrade pip
+RUN pip install ./deconvolution_models
+
+#COPY deconvolution_models/deconvolution_models/ ./deconvolution_models/
+# COPY deconvolution_models/setup.py ./
+# RUN python3 setup.py install
+
+
+# Wanted to use slim for deployment, but did not have basic
+# things needed by nextflow (like "ps")
+#FROM python:3.11-slim-bullseye
+FROM python:3.11-bullseye
 
 # Install required system dependencies
 RUN apt-get update && \
@@ -34,12 +46,16 @@ WORKDIR /home/appuser
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=build /opt/venv /opt/venv
-# Dev only
-COPY --from=build /app_repository /app_repository 
 
+# Debugging only
+#COPY --from=build /app_repository /app_repository 
+
+# Dev only. REMOVE FOR PRODUCTION
+# NOTE: IF YOU RUN /opt/venv/bin/deconvolution, it will still get the /opt/venv libraries
+ENV PYTHONPATH="/nf-core/epiread-tools/deconvolution_models/deconvolution_models:/nf-core/epiread-tools/epiread-tools:$PYTHONPATH"
+COPY deconvolution_models/demo ./demo/
 
 USER appuser
 
-# Set the entry point command
-ENTRYPOINT /bin/bash
-#CMD [ "bash" ]
+# Nextflow did not like setting an entrypoint.
+#ENTRYPOINT /bin/bash

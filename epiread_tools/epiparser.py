@@ -130,7 +130,16 @@ class EpireadReader:
         read files at designated intervals to matrix
         :return: scipy sparse matrix, mapper
         '''
-        mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=self.mapper_slop)
+
+        # Some readers like modbam do not need a mapper
+        # Only do the next step if self.config['cpg_coordinates'] is not None
+        if self.config['cpg_coordinates'] is None:
+            # I'm not sure yet if the code can work without a mapper
+            print("No cpg_coordinates file specified. Quitting")
+            sys.exit(1)
+        else:
+            mapper = Mapper(chrom, intervals, self.config['epiread_files'], self.config['cpg_coordinates'], slop=self.mapper_slop)
+
         small_matrices = []
         sources = []
         origins = []
@@ -208,6 +217,10 @@ class AtlasReader:
         :return:
         '''
         df = pd.read_csv(self.atlas, sep="\t")
+
+        # Filter out lines where the first column (chrom) contains the string "alt"
+        df = df[~df['CHROM'].str.contains('alt')]
+
         vals = df.iloc[:, 3:].values
         self.meth = vals[:, ::2].T
         self.cov =  vals[:, 1::2].T
@@ -230,11 +243,39 @@ class AtlasReader:
         for i, cpg in enumerate(cpgs):
             if cpg in mapper.abs_to_rel and mapper.abs_to_rel[cpg] in mapper.all_rel:
                 mat[:, mapper.abs_to_ind(cpg)] = vals[:, chrom_filter][:, i]
+#                print(f"atlas MATCHES cpg file: chrom {chrom}, cpg {cpg}")
             elif not in_intervals(cpg, mapper.merged_slopped_intervals):
+                # There are about 20 CpGs that fall in here, within 2 discrete regions
                 print("not in intervals", cpg)
                 pass
             else:
-                raise KeyError(cpg, f"Atlas coordinate {chrom}:{cpg} does not fall on CpG in CpGs file. Maybe a problem with liftOver of the atlas?")
+                print(f"atlas start doesn't match cpg file: chrom {chrom}, cpg {cpg}")
+                # # Testing lift over on a weird coordinate
+                # # $ more bad.hg19.bed 
+                # # chr9    40537943        40537944
+                # # chr9    38639750        38639751
+                # /mnt/input/Data/liftOver/liftOver ./bad.hg19.bed /mnt/input/Data/liftOver/hg19ToHg38.over.chain bad.hg38.bed unmapped
+
+                # cat bad.hg19.bed | bedtools getfasta -bed - -fi /input/Data/Genomes/hg19/hg19.p13.plusMT.no_alt_analysis_set.fa 
+                # # >chr9:40537943-40537944
+                # # C
+                # # >chr9:38639750-38639751
+                # # C
+                # cat bad.hg38.bed | bedtools getfasta -bed - -fi /input/Data/Genomes/hg38_noalt/hg38.analysisSet.fa                                             
+                # # >chr9:67154896-67154897
+                # # G
+                # # >chr9:38639753-38639754
+                # # c
+                #
+                # cat beta_atlas.hg38.tsv | cut -f 1,2,3  | grep -v START | bedtools getfasta -bed - -fi /input/Data/Genomes/hg38_noalt/hg38.analysisSet.fa | gr>
+                # #  33922 C
+                # #     60 G
+                # #  27547 c
+                # #    160 g
+
+                # FOR NOW, SHUT THIS OFF
+                if (False):
+                    raise KeyError(f"Atlas coordinate {chrom}:{cpg} does not fall on CpG in CpGs file. Maybe a problem with liftOver of the atlas?")
         return mat
 
     def parse_one_chromosome(self, chrom, intervals, vals):
@@ -306,6 +347,11 @@ class UXMAtlasReader():
             df = pd.read_csv(infile, sep="\t")
         self.intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.iloc[:,:3].values]
         percent_u = df.iloc[:,6:].values
+
+        # print the shape of self.intervals and percent_u with a description
+        print("self.intervals.shape: ", np.array(self.intervals).shape)
+        print("percent_u.shape: ", percent_u.shape)
+
         return self.intervals, percent_u
 
 #%%

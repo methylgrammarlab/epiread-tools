@@ -123,20 +123,31 @@ class GenomicInterval:
     def __len__(self):
         return self.get_genomic_size()
 
-def cut(fp, intervals):
+def cut(fp, intervals, filetype="tabix"):
     '''
     Tabix out interval from file, return reads
     in original format
     :param intervals: list of GenomicInterval of chunk
     :return: iterator of relevant records
     '''
+    if (filetype == "tabix"):
+        tabixfile = pysam.TabixFile(fp, mode="r")
+    elif (filetype == "bam"):
+        print(f"Loading bam file {fp}, {len(intervals)} intervals on {intervals[0].chrom} ")
+        print(f"\tFirst interval: {intervals[0]}: interval length {intervals[0].end - intervals[0].start}")
+        # Note that this will only work with indexed bam files!
+        tabixfile = pysam.AlignmentFile(fp, "r", require_index=True)
+    else:
+        raise ValueError("filetype must be tabix or bam")
 
-    tabixfile = pysam.TabixFile(fp, mode="r")
 
     for interval in intervals:
+#        print(f"Fetching {interval}")
         try:
+            # TODO: Do we need to specify multiple_iterators=True ?  I think no because single threaded?
             yield from tabixfile.fetch(interval.chrom, interval.start-1, interval.end)
         except ValueError:  # no coverage for this region in file
+            print(f"No coverage for {interval}")
             continue
 
 class Mapper:
@@ -218,6 +229,7 @@ class Mapper:
         sample_to_id = dict(zip(self.epiread_files,range(1,len(self.epiread_files)+1)))
         sample_to_id["All"] = 0
         self.sample_to_id = sample_to_id
+#        print("sample_to_id", self.sample_to_id)
 
     def get_sample_id_list(self):
         '''
@@ -236,9 +248,12 @@ class Mapper:
         CpGs = []
         for record in cut(self.CpG_file, self.merged_slopped_intervals):
             CpGs.append(int(record.split(TAB)[1]))  # start position in bed format
+        print(f"{len(CpGs)} CpGs loaded")
         CpGs = np.array(CpGs)
         rel_to_abs = dict(enumerate(CpGs))
+#        print(f"rel_to_abs: {rel_to_abs}")
         abs_to_rel = {v: k for k, v in rel_to_abs.items()}
+#        print(f"abs_to_rel: {abs_to_rel}")
         self.cpgs, self.abs_to_rel, self.rel_to_abs = CpGs, abs_to_rel, rel_to_abs
 
     def get_nearest_rel_intervals(self, genomic_intervals):
@@ -334,6 +349,10 @@ def bedgraph_to_intervals(fp, header=False):
         df = pd.read_csv(fp, usecols=[0,1,2], skiprows=1, names=["chrom", "start", "end"], sep="\t")
     else:
         df = pd.read_csv(fp, usecols=[0,1,2], names=["chrom", "start", "end"], sep="\t")
+
+    # Filter out intervals where "chrom" contains the string "alt"
+    df = df[~df['chrom'].str.contains('alt')]
+
     intervals = [GenomicInterval().set_from_positions(chrom, start, end) for chrom, start, end in df.to_records(index=False)]
     return intervals
 

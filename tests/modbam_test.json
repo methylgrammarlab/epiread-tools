@@ -1,0 +1,12 @@
+{
+    "outfile": "/home/appuser/modbam_test2.bed",
+    "genomic_intervals": [
+        "chr16:616000-617000",
+        "chr16:19113000-19116000"
+    ],
+    "epiread_files": [
+        "tests/data/test-fw-rev.hg38.bam"
+    ],
+    "epiformat": "modbam",
+    "cpg_coordinates": "tests/data/modbam_test-fw-rev.cpg_file.0based.hg38.bed.gz"
+}
